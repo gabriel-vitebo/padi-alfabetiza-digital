@@ -1,10 +1,11 @@
 import { computed, ref } from 'vue'
-import type { Question } from '~/types/diagnostic'
+import { calculateDiagnosticResult } from '~/utils/diagnostic-result'
+import type { DiagnosticResult, Question } from '~/types/diagnostic'
 
 export const useDiagnostic = (questions: Question[]) => {
   const currentIndex = ref(0)
-  const answers = ref<Record<string, string>>({})
-  const isCompleted = ref(false)
+  const answers = useState<Record<string, string>>('diagnostic-answers', () => ({}))
+  const result = useState<DiagnosticResult | null>('diagnostic-result', () => null)
 
   const currentQuestion = computed(() => questions[currentIndex.value])
   const currentAnswer = computed(() => answers.value[currentQuestion.value?.id])
@@ -23,11 +24,23 @@ export const useDiagnostic = (questions: Question[]) => {
     if (!hasCurrentAnswer.value) return
 
     if (isLastQuestion.value) {
-      isCompleted.value = true
       return
     }
 
     currentIndex.value += 1
+  }
+
+  const finish = () => {
+    if (questions.some(question => !answers.value[question.id])) return false
+
+    result.value = calculateDiagnosticResult(questions, answers.value)
+    return true
+  }
+
+  const reset = () => {
+    currentIndex.value = 0
+    answers.value = {}
+    result.value = null
   }
 
   const previous = () => {
@@ -39,12 +52,14 @@ export const useDiagnostic = (questions: Question[]) => {
     currentIndex,
     currentQuestion,
     hasCurrentAnswer,
-    isCompleted,
     isFirstQuestion,
     isLastQuestion,
+    finish,
     next,
     previous,
     progress,
-    selectAnswer
+    selectAnswer,
+    result,
+    reset
   }
 }

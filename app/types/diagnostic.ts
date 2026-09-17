@@ -14,6 +14,7 @@ export const competencyLabels: Record<Competency, string> = {
 export type QuestionOption = {
   id: string
   label: string
+  score: number
 }
 
 export type Question = {
@@ -21,4 +22,17 @@ export type Question = {
   competency: Competency
   statement: string
   options: QuestionOption[]
+}
+
+export type CompetencyResult = {
+  competency: Competency
+  earnedScore: number
+  maxScore: number
+  percentage: number
+  feedback: string
+}
+
+export type DiagnosticResult = {
+  overallPercentage: number
+  competencies: CompetencyResult[]
 }
