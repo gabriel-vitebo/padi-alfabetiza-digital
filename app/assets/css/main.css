@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  --app-ink: #e8eef7;
+  --app-muted: #9aa9bd;
+  --app-paper: #0b1220;
+  --app-teal: #55d6c2;
+}
+
+@theme {
+  --font-sans: "Avenir Next", "Segoe UI", sans-serif;
+}
+
+html {
+  background: var(--app-paper);
+}
+
+body {
+  min-width: 320px;
+  margin: 0;
+  color: var(--app-ink);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(55, 212, 191, 0.12), transparent 28rem),
+    var(--app-paper);
+  font-family: var(--font-sans);
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 3px solid var(--app-teal);
+  outline-offset: 3px;
+}
+
+::selection {
+  color: white;
+  background: var(--app-teal);
+}
