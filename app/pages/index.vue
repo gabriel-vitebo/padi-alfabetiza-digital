@@ -10,7 +10,7 @@
           Esta aplicação faz parte de uma pesquisa acadêmica sobre alfabetização e competências digitais. Queremos compreender como estudantes lidam com situações relacionadas ao uso consciente, crítico e seguro da tecnologia.
         </p>
         <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <UButton to="/diagnostico" size="xl" color="primary" trailing-icon="i-lucide-arrow-right" class="justify-center sm:justify-start">
+          <UButton to="/perguntas" size="xl" color="primary" trailing-icon="i-lucide-arrow-right" class="justify-center sm:justify-start">
             Iniciar diagnóstico
           </UButton>
           <span class="text-center text-sm text-slate-400 sm:text-left">Uma etapa futura da pesquisa</span>

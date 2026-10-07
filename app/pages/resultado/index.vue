@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { diagnosticQuestions } from '~/data/diagnostic-questions'
 import { useDiagnostic } from '~/composables/use-diagnostic'
 import { getCompetencyLabel } from '~/utils/diagnostic-result'
+import type { Question } from '~/types/diagnostic'
 
-const { result, reset } = useDiagnostic(diagnosticQuestions)
+const sessionQuestions = useState<Question[]>('question-session-questions', () => [])
+const sessionConfig = useState<{ context: 'diagnostico' | 'feira' } | null>('question-session-config', () => null)
+const { result, reset } = useDiagnostic(sessionQuestions.value)
 const competencies = computed(() => result.value?.competencies ?? [])
 const hasResult = computed(() => Boolean(result.value))
+const isFairContext = computed(() => sessionConfig.value?.context === 'feira')
 const highestPercentage = computed(() => {
   if (!competencies.value.length) return 0
   return Math.max(...competencies.value.map(item => item.percentage))
@@ -29,7 +32,9 @@ const formatCompetencyList = (items: typeof competencies.value) => {
 
 const restartDiagnostic = async () => {
   reset()
-  await navigateTo('/diagnostico')
+  sessionQuestions.value = []
+  sessionConfig.value = null
+  await navigateTo(isFairContext.value ? '/perguntas?contexto=feira' : '/perguntas')
 }
 </script>
 
@@ -46,9 +51,9 @@ const restartDiagnostic = async () => {
 
     <div v-else class="space-y-10">
       <header class="max-w-3xl space-y-4">
-        <p class="text-sm font-semibold uppercase tracking-[0.18em] text-teal-300">Diagnóstico concluído</p>
-        <h1 class="text-3xl font-semibold tracking-tight text-white sm:text-5xl">Seu diagnóstico digital</h1>
-        <p class="text-base leading-7 text-slate-300">Este resultado apresenta um retrato das suas respostas e pode ajudar a identificar competências já desenvolvidas e aspectos que ainda podem ser explorados.</p>
+          <p class="text-sm font-semibold uppercase tracking-[0.18em] text-teal-300">{{ isFairContext ? 'Desafio Digital concluído' : 'Diagnóstico concluído' }}</p>
+          <h1 class="text-3xl font-semibold tracking-tight text-white sm:text-5xl">{{ isFairContext ? 'Suas respostas no desafio' : 'Seu diagnóstico digital' }}</h1>
+          <p class="text-base leading-7 text-slate-300">{{ isFairContext ? 'Este resultado mostra como você respondeu às situações que apareceram nesta experiência rápida.' : 'Este resultado apresenta um retrato das suas respostas às situações apresentadas e pode ajudar a identificar competências já desenvolvidas e aspectos que ainda podem ser explorados.' }}</p>
       </header>
 
       <section aria-labelledby="competencies-title" class="space-y-5">
@@ -73,7 +78,7 @@ const restartDiagnostic = async () => {
         </div>
       </section>
 
-      <section class="border-y border-slate-800 py-7" aria-labelledby="summary-title">
+      <section v-if="!isFairContext" class="border-y border-slate-800 py-7" aria-labelledby="summary-title">
         <h2 id="summary-title" class="text-xl font-semibold text-white">Um resumo para continuar aprendendo</h2>
         <div class="mt-4 space-y-3 text-sm leading-6 text-slate-300">
           <p>Entre as situações apresentadas, <strong class="font-semibold text-teal-200">{{ formatCompetencyList(highestCompetencies) }}</strong> foi a competência em que suas respostas demonstraram maior domínio.</p>

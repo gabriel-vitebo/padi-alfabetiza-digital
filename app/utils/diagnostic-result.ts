@@ -1,4 +1,4 @@
-import { type Competency, competencyLabels, type DiagnosticResult, type Question } from '~/types/diagnostic'
+import { type CompetencyId, competencyLabels, type DiagnosticResult, type Question } from '~/types/diagnostic'
 
 export const diagnosticFeedback = (percentage: number) => {
   if (percentage < 40) return 'Há oportunidades importantes para desenvolver esta competência.'
@@ -14,7 +14,7 @@ export const calculateDiagnosticResult = (
   let earnedTotal = 0
   let maximumTotal = 0
 
-  const results = competencies.map((competency: Competency) => {
+  const results = competencies.map((competency: CompetencyId) => {
     const competencyQuestions = questions.filter(question => question.competency === competency)
     const maxScore = competencyQuestions.reduce((total, question) => {
       return total + Math.max(...question.options.map(option => option.score), 0)
@@ -43,4 +43,4 @@ export const calculateDiagnosticResult = (
   }
 }
 
-export const getCompetencyLabel = (competency: Competency) => competencyLabels[competency]
+export const getCompetencyLabel = (competency: CompetencyId) => competencyLabels[competency]

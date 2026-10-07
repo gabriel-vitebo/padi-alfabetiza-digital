@@ -10,7 +10,7 @@ defineProps<{
   <div class="space-y-3" aria-label="Progresso do diagnóstico">
     <div class="flex items-center justify-between gap-4 text-sm font-medium">
       <span class="text-slate-200">Pergunta {{ current }} de {{ total }}</span>
-      <span class="text-teal-300">{{ percentage }}%</span>
+      <span class="text-teal-300">{{ Math.round(percentage) }}%</span>
     </div>
     <div
       class="h-2 overflow-hidden rounded-full bg-slate-800"
