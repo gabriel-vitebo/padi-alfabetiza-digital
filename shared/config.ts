@@ -4,29 +4,22 @@ export const surveyRules = {
 } as const
 export const MIN_AGGREGATE_SAMPLE_SIZE = 5
 export const contextualOptions = {
-  course: [
-    { value: 'computacao', label: 'Ciência da Computação' },
-    { value: 'administracao', label: 'Administração' },
-    { value: 'pedagogia', label: 'Pedagogia' },
-    { value: 'engenharia', label: 'Engenharia' },
-    { value: 'outro', label: 'Outro' }
-  ],
-  semester: Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: `${i + 1}º semestre` })),
-  device: [
-    { value: 'celular', label: 'Celular' }, { value: 'computador', label: 'Notebook/computador' },
-    { value: 'tablet', label: 'Tablet' }, { value: 'outro', label: 'Outro' }
-  ],
-  internet: [
-    { value: 'regular', label: 'Regular sem grandes dificuldades' },
-    { value: 'limitada', label: 'Com algumas limitações' }, { value: 'irregular', label: 'Irregular' }
-  ],
-  help: [
-    { value: 'frequentemente', label: 'Frequentemente' }, { value: 'as-vezes', label: 'Às vezes' },
-    { value: 'raramente', label: 'Raramente' }, { value: 'nunca', label: 'Nunca' }
+  area: [
+    { value: 'tecnologia', label: 'Tecnologia e computação' },
+    { value: 'gestao', label: 'Administração, negócios e finanças' },
+    { value: 'educacao', label: 'Educação e ensino' },
+    { value: 'saude', label: 'Saúde e bem-estar' },
+    { value: 'engenharia', label: 'Engenharias, construção e indústria' },
+    { value: 'direito', label: 'Direito e segurança pública' },
+    { value: 'comunicacao', label: 'Comunicação, artes e cultura' },
+    { value: 'servicos', label: 'Comércio e serviços' },
+    { value: 'agro', label: 'Agropecuária e meio ambiente' },
+    { value: 'outra', label: 'Outra área' },
+    { value: 'sem-area', label: 'Não estudo nem atuo em uma área no momento' },
+    { value: 'prefiro-nao-informar', label: 'Prefiro não informar' }
   ]
 }
 export type Profile = Record<keyof typeof contextualOptions, string>
 export const profileLabels: Record<keyof Profile, string> = {
-  course: 'Curso', semester: 'Semestre', device: 'Principal dispositivo para estudar',
-  internet: 'Condição de acesso à internet', help: 'Frequência de necessidade de ajuda em tarefas digitais'
+  area: 'Área de estudo ou atuação'
 }

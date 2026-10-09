@@ -2,8 +2,8 @@
 import { contextualOptions, profileLabels, surveyRules, type Profile } from '#shared/config'
 import type { SurveyMode } from '#shared/diagnostic'
 const props = defineProps<{ mode: SurveyMode }>()
-const { canStartNewSession,restartUnavailable,session,saved,loading,submitting,error,storageWarning,currentIndex,currentQuestion,currentAnswer,hasCurrentAnswer,isFirstQuestion,isLastQuestion,progress,start,restore,selectAnswer,next,previous,finish,newFair } = useDiagnostic(props.mode)
-const profile = ref<Profile>({course:'',semester:'',device:'',internet:'',help:''})
+const { canStartNewSession,restartUnavailable,session,loading,submitting,error,storageWarning,currentIndex,currentQuestion,currentAnswer,hasCurrentAnswer,isFirstQuestion,isLastQuestion,progress,start,restore,selectAnswer,next,previous,finish } = useDiagnostic(props.mode)
+const profile = ref<Profile>({area:''})
 const research = props.mode === 'research'
 </script>
 
@@ -17,12 +17,6 @@ const research = props.mode === 'research'
       <UButton v-else-if="!session" variant="outline" color="neutral" @click="restore">Tentar recuperar sessão</UButton>
     </div>
     <p v-if="loading" role="status">Carregando sua participação…</p>
-    <div v-else-if="saved?.completed" class="space-y-5">
-      <h1 class="text-3xl font-semibold text-white">Participação concluída</h1>
-      <p>Já existe uma participação concluída neste dispositivo.</p>
-      <UButton :to="`/resultado/${saved.sessionId}`" size="lg">Ver meu resultado</UButton>
-      <UButton v-if="!research" class="ml-3" variant="outline" @click="newFair">Novo desafio</UButton>
-    </div>
     <div v-else-if="currentQuestion && session" class="space-y-8">
       <QuestionProgress :current="currentIndex + 1" :total="session.questions.length" :percentage="progress" />
       <fieldset :disabled="submitting" class="space-y-8">
@@ -39,15 +33,16 @@ const research = props.mode === 'research'
       <h1 class="text-3xl font-semibold text-white sm:text-4xl">{{ research ? 'Como você lida com situações digitais?' : 'Experimente suas escolhas digitais' }}</h1>
       <p class="leading-7 text-slate-300">{{ research ? 'Participe de uma pesquisa acadêmica anônima sobre os sete eixos do PADI. Não pedimos nome, e-mail ou documentos.' : 'Uma experiência rápida durante a feira, limitada às competências apresentadas. Não representa um diagnóstico completo.' }}</p>
       <p class="text-slate-300">São {{ surveyRules[mode].questionCount }} situações. Escolha a alternativa que melhor representa o que você faria.</p>
-      <div v-if="research" class="grid gap-5 sm:grid-cols-2">
+      <div v-if="research" class="space-y-5">
         <div v-for="(options, key) in contextualOptions" :key="key" class="space-y-2">
           <label :for="`profile-${key}`" class="block text-sm font-medium">{{ profileLabels[key] }}</label>
-          <select :id="`profile-${key}`" v-model="profile[key]" required class="w-full rounded-xl border border-slate-600 bg-slate-900 p-3 text-white">
+          <select :id="`profile-${key}`" aria-describedby="profile-purpose" v-model="profile[key]" required class="w-full rounded-xl border border-slate-600 bg-slate-900 p-3 text-white">
             <option disabled value="">Selecione</option>
             <option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option>
           </select>
         </div>
       </div>
+      <p v-if="research" id="profile-purpose" class="text-sm leading-6 text-slate-400">Escolha a área que mais combina com seus estudos ou trabalho. Usamos essa informação apenas para comparar os resultados entre áreas; ela não altera sua pontuação. Se preferir, selecione “Prefiro não informar”.</p>
       <p class="text-sm leading-6 text-slate-400">Participação voluntária. Os dados serão usados de forma agregada neste trabalho acadêmico. O instrumento não é psicometricamente validado e os resultados são descritivos. Você pode sair antes de concluir.</p>
       <UButton type="submit" size="xl" :loading="loading">{{ research ? 'Começar pesquisa' : 'Começar desafio' }}</UButton>
     </form>

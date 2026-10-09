@@ -2,11 +2,11 @@
 import { contextualOptions, profileLabels } from '#shared/config'
 import { competencyLabels } from '#shared/diagnostic'
 import type { DashboardSummary } from '#shared/dashboard'
-const filters = ref({course:'',semester:'',device:'',internet:''})
+const filters = ref({area:''})
 const query = computed(() => Object.fromEntries(Object.entries(filters.value).filter(([,value]) => value)))
 const { data, status, error, refresh } = await useFetch<DashboardSummary>('/api/dashboard/summary', { query })
 const segment = computed(() => data.value?.segment)
-const labelFor = (key: string, value: string) => contextualOptions[key as keyof typeof contextualOptions]?.find(o => o.value === value)?.label ?? value
+const labelFor = (key: string, value: string) => value === '__legacy__' ? 'Participações anteriores (área não coletada)' : contextualOptions[key as keyof typeof contextualOptions]?.find(o => o.value === value)?.label ?? value
 const overallFor = (id: string) => data.value?.overall?.competencies.find(c => c.competency === id)?.average
 useHead({title:'Dashboard da pesquisa · PADI'})
 </script>
@@ -17,7 +17,7 @@ useHead({title:'Dashboard da pesquisa · PADI'})
       <h1 class="text-3xl font-semibold text-white sm:text-4xl">Retrato das participações</h1>
       <p class="max-w-3xl leading-7 text-slate-300">Somente pesquisas concluídas. Resultados descritivos, sem inferência causal. O Desafio Digital não compõe esta amostra.</p>
     </header>
-    <form class="grid gap-4 rounded-2xl border border-slate-800 bg-slate-900 p-5 sm:grid-cols-2 lg:grid-cols-4" @submit.prevent>
+    <form class="grid gap-4 rounded-2xl border border-slate-800 bg-slate-900 p-5 sm:grid-cols-2" @submit.prevent>
       <div v-for="(_value, key) in filters" :key="key" class="space-y-2">
         <label :for="`filter-${key}`" class="block text-sm font-medium">{{ profileLabels[key] }}</label>
         <select :id="`filter-${key}`" v-model="filters[key]" class="w-full rounded-lg border border-slate-600 bg-slate-950 p-3 text-white">
@@ -51,7 +51,7 @@ useHead({title:'Dashboard da pesquisa · PADI'})
         </div>
       </section>
       <section class="space-y-5">
-        <h2 class="text-2xl font-semibold">Perfil contextual</h2>
+        <h2 class="text-2xl font-semibold">Áreas de estudo ou atuação</h2>
         <div class="grid gap-4 md:grid-cols-2">
           <article v-for="(distribution,key) in segment.demographics" :key="key" class="space-y-5 rounded-2xl border border-slate-800 bg-slate-900 p-5">
             <h3 class="font-semibold">{{ profileLabels[key as keyof typeof profileLabels] }}</h3>
@@ -71,7 +71,7 @@ useHead({title:'Dashboard da pesquisa · PADI'})
           </table>
         </div>
       </section>
-      <p class="text-sm leading-6 text-slate-400">O instrumento não é psicometricamente validado. As perguntas são sorteadas; percentuais de grupos diferentes não demonstram causas. A participação é anônima e o controle neste dispositivo não garante uma resposta por pessoa.</p>
+      <p class="text-sm leading-6 text-slate-400">O instrumento não é psicometricamente validado. As perguntas são sorteadas; percentuais de grupos diferentes não demonstram causas. A participação é anônima e uma pessoa pode participar novamente ao voltar à pesquisa.</p>
     </template>
   </section>
 </template>

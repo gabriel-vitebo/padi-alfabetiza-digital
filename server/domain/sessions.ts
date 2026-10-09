@@ -22,7 +22,7 @@ export async function loadBank(db: Database | Transaction): Promise<StoredQuesti
 }
 export async function startSession(db: Database, mode: SurveyMode, profile?: Profile, synthetic = false): Promise<StartedSession> {
   if (synthetic) assertDevelopmentSeed()
-  if (mode === 'research' && !profile) throw new SurveyError(400, 'Preencha os dados contextuais.')
+  if (mode === 'research' && !profile) throw new SurveyError(400, 'Selecione sua área de estudo ou atuação.')
   await assertDatabaseEnvironment(db)
   return db.$transaction(async tx => {
     const rule = surveyRules[mode]

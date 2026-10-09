@@ -32,12 +32,11 @@ export const useDiagnostic = (mode: SurveyMode) => {
       let stored: string | null = null
       try { stored = localStorage.getItem(key) } catch { storageWarning.value = 'Armazenamento local indisponível; a retomada pode não funcionar neste navegador.' }
       if (!stored) {
-        // Preserve the old completed marker without granting access via UUID alone.
+        // Only unfinished participation needs recovery on a new visit.
         try {
           const legacy = JSON.parse(localStorage.getItem(`padi:${mode}:v1`) || 'null') as SavedSession | null
-          if (legacy?.sessionId) {
-            if (legacy.completed) saved.value = { completed: true, sessionId: legacy.sessionId }
-            else canStartNewSession.value = true
+          if (legacy?.sessionId && !legacy.completed) {
+            canStartNewSession.value = true
             error.value = 'Existe uma participação anterior à atualização de segurança. O identificador antigo não permite recuperar o acesso individual.'
           }
         } catch { /* Invalid legacy state does not authorize access. */ }
@@ -46,11 +45,12 @@ export const useDiagnostic = (mode: SurveyMode) => {
       let value: SavedSession
       try { value = JSON.parse(stored) } catch { throw new Error('invalid-storage') }
       if (typeof value.sessionId !== 'string' || !/^[0-9a-f-]{36}$/i.test(value.sessionId)) throw new Error('invalid-storage')
-      if (value.completed) saved.value = value
+      if (value.completed) return
       if (!value.accessToken || !/^[A-Za-z0-9_-]{43}$/.test(value.accessToken)) { canStartNewSession.value = !value.completed; throw new Error('missing-token') }
       access.remember(value.sessionId, value.accessToken)
       const loaded = await $fetch<Session>(`/api/sessions/${value.sessionId}`, { headers: access.headers(value.sessionId) })
       if (loaded.mode !== mode) throw new Error('invalid-mode')
+      if (loaded.completed) return
       session.value = loaded
       answers.value = Object.fromEntries(loaded.questions.flatMap(q => {
         const id = value.answers?.[q.id]
@@ -102,11 +102,6 @@ export const useDiagnostic = (mode: SurveyMode) => {
     session.value = null; saved.value = null; answers.value = {}; currentIndex.value = 0
     canStartNewSession.value = false; error.value = ''
   }
-  function newFair() {
-    if (mode !== 'fair') return
-    session.value = null; saved.value = null; answers.value = {}; currentIndex.value = 0
-    try { localStorage.removeItem(key) } catch { /* Next start will retry storage. */ }
-  }
   onMounted(restore)
-  return { canStartNewSession,restartUnavailable,session,saved,loading,submitting,error,storageWarning,currentIndex,currentQuestion,currentAnswer,hasCurrentAnswer,isFirstQuestion,isLastQuestion,progress,start,restore,selectAnswer,next,previous,finish,newFair }
+  return { canStartNewSession,restartUnavailable,session,saved,loading,submitting,error,storageWarning,currentIndex,currentQuestion,currentAnswer,hasCurrentAnswer,isFirstQuestion,isLastQuestion,progress,start,restore,selectAnswer,next,previous,finish }
 }

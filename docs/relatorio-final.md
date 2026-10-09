@@ -25,12 +25,12 @@ Os arquivos, modelos, relações, conexão, pooling, transações e migração d
 
 | Experiência | Entrega |
 |---|---|
-| Pesquisa | Perfil anônimo, 14 questões balanceadas, API/Prisma, snapshots, retomada e conclusão atômica |
+| Pesquisa | Área de estudo ou atuação, 14 questões balanceadas, API/Prisma, snapshots, retomada e conclusão atômica |
 | Desafio | Mesmo motor, cinco eixos/contexto feira, resultado limitado |
 | Resultado | Persistência real, token obrigatório, percentuais por eixo, feedback e empates |
-| Dashboard | Pesquisa concluída, agregados Prisma/PostgreSQL, filtros e comparação, sem respostas brutas |
+| Dashboard | Pesquisa concluída, agregados Prisma/PostgreSQL, filtro por área e comparação, sem respostas brutas |
 | Gráficos | Chart.js/Vue, barras e representações textuais/tabela |
-| Participação | localStorage v2, prevenção de repetição acidental, bloqueio server-side de reenvio |
+| Participação | localStorage v2, nova participação em visita espontânea, retomada das incompletas e bloqueio server-side de reenvio da mesma sessão |
 
 ## Validação
 
@@ -57,6 +57,10 @@ Evidências e limites: [validacao.md](validacao.md). As duas participações exi
 - Conferir o destino antes de exportar APP_ENV, DATABASE_URL, DATABASE_MIGRATION_URL e CONFIRM_DATABASE_ENV no executor administrativo.
 - Promover migrations/seed estrutural local → homolog → production.
 - Configurar Vercel Preview/Production com variáveis distintas e validar os deploys. Nenhuma operação remota foi executada.
-- Revisar opções de cursos/semestres e realizar pré-teste acadêmico.
+- Revisar categorias de área de estudo ou atuação e realizar pré-teste acadêmico.
 
 Sessões antigas sem token permanecem nos agregados, mas não podem ser recuperadas individualmente apenas por UUID. A pesquisa continua anônima, não psicometricamente validada e descritiva; localStorage não garante uma resposta por pessoa.
+
+## Atualização: público geral e perfil simplificado
+
+A pesquisa passou a coletar apenas área de estudo ou atuação, incluindo a opção de não informar. Semestre, dispositivo, internet e necessidade de ajuda deixaram de ser solicitados. O painel utiliza a área para comparações descritivas, sem alterar perguntas ou pontuação. A sexta migration preserva o histórico e permite que os campos antigos fiquem nulos em novas participações. Não se deduz a área dos registros anteriores.

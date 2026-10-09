@@ -54,6 +54,7 @@ CHECKs PostgreSQL não representáveis no Prisma Schema permanecem nas migration
 3. `20261007151143_profile_kind_defaults`: constantes do perfil como defaults/NOT NULL/CHECKs.
 4. `20261009000000_session_access`: hash de acesso nullable para preservar registros legados sem conceder acesso inseguro.
 5. `20261009010000_completion_integrity`: proíbe totais nulos/incoerentes ao concluir.
+6. `20261009140000_participant_area`: adiciona área com FK de catálogo, CHECK do tipo e índice; permite NULL nos cinco campos históricos sem apagar valores. O seed estrutural cadastra as áreas.
 
 As três migrations encontradas não foram editadas. As duas novas foram adicionadas e aplicadas com **Prisma Migrate**, sem reset. `_prisma_migrations` é o histórico autoritativo; sua localização depende do schema padrão da URL administrativa (neste ambiente, `public`).
 
@@ -67,7 +68,7 @@ GET da sessão, POST de respostas e GET de resultado exigem `Authorization: Bear
 
 O navegador guarda `padi:research:v2`/`padi:fair:v2`, incluindo token e ID. O segredo não é colocado na URL nem no HTML renderizado pelo servidor. Resultado é consultado client-side. Se storage falhar, a memória da visita mantém o acesso e a interface informa a limitação de retomada.
 
-Sessões anteriores permanecem no banco/agregados, mas **não são reivindicáveis por UUID**. Sem identidade ou segredo anterior, não há recuperação segura. Marcadores v1 concluídos continuam prevenindo repetição acidental e mostram a explicação da atualização. Apenas a sessão antiga incompleta pode ser substituída, por ação explícita, por uma nova participação; não se apaga o registro no banco. Perder o segredo local também impede a recuperação de sessões novas; não introduzimos login, CPF, e-mail ou fingerprinting.
+Sessões anteriores permanecem no banco/agregados, mas **não são reivindicáveis por UUID**. Sem identidade ou segredo anterior, não há recuperação segura. Marcadores concluídos, inclusive v1, não bloqueiam uma nova participação ao voltar ao formulário. Sessões incompletas são retomadas; uma sessão antiga incompleta sem segredo pode ser substituída por ação explícita, sem apagar o registro no banco. O resultado não oferece botão de refazer. Perder o segredo local também impede a recuperação de sessões novas; não introduzimos login, CPF, e-mail ou fingerprinting.
 
 ## Transação e cálculo
 
@@ -81,7 +82,7 @@ Resultados são reconstruídos com os snapshots persistidos, não com uma nova c
 
 Prisma count/groupBy obtém frequências agregadas; a aplicação combina essas frequências em médias ponderadas dos percentuais. Uma consulta `$queryRaw` com `Prisma.sql` e parâmetros calcula a média por questão em relação ao máximo do snapshot. Não existe driver SQL paralelo ou interpolação de SQL de usuário.
 
-Somente pesquisa concluída entra no painel. Há filtros de curso, semestre, dispositivo e internet, comparação com amostra geral, distribuições, questões ordenadas e sinalização de dados fictícios.
+Somente pesquisa concluída entra no painel. Há filtro por área de estudo ou atuação, comparação com amostra geral, distribuição por área, questões ordenadas e sinalização de dados fictícios. A API de início recebe somente `profile.area`; o catálogo inclui opções para público geral e para não informar. Campos antigos ficam preservados, mas não são mais coletados/expostos no painel. Área NULL identifica registros anteriores, sem inferir uma área a partir do curso antigo; esses registros permanecem na amostra geral e recebem rótulo próprio na distribuição quando a privacidade permite.
 
 Mínimo de cinco: segmento, complementos da amostra geral e de todos os subconjuntos dos filtros ativos. Questões/eixos e distribuições comparadas têm supressão adicional para complementos pequenos. Uma célula pequena suprime a distribuição inteira, evitando subtração simples. Tudo usa uma transação RepeatableRead.
 

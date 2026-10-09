@@ -115,6 +115,7 @@ Migrations em `prisma/migrations`:
 3. `20261007151143_profile_kind_defaults`: converte constantes geradas do perfil em defaults, NOT NULL e CHECKs equivalentes, compatíveis com o schema Prisma.
 4. `20261009000000_session_access`: adiciona o hash de acesso, preservando sessões antigas.
 5. `20261009010000_completion_integrity`: exige totais não nulos e coerentes nas sessões concluídas.
+6. `20261009140000_participant_area`: acrescenta área de estudo ou atuação; torna os campos antigos opcionais, preservando seus valores. Execute também o seed estrutural para cadastrar as áreas.
 
 Não edite migrations aplicadas. O histórico autoritativo passa a ser `_prisma_migrations` (no schema padrão da URL administrativa, geralmente `public`); a tabela antiga de checksums é removida pela segunda migration. Os CHECKs específicos de PostgreSQL permanecem nas migrations porque o Prisma Schema não representa todos eles.
 
@@ -145,7 +146,7 @@ O seed fictício usa perfis de acesso/autonomia variados, cinco cursos, oito sem
 
 | Rota | Função |
 |---|---|
-| `/pesquisa` | Apresentação, perfil contextual e 14 questões |
+| `/pesquisa` | Apresentação, área de estudo ou atuação e 14 questões |
 | `/desafio` | Cinco questões elegíveis para feira em eixos distintos |
 | `/resultado/:sessionId` | Resultado persistido, consultável ao recarregar |
 | `/dashboard` | Agregações da pesquisa concluída e comparação de segmentos |
@@ -153,12 +154,16 @@ O seed fictício usa perfis de acesso/autonomia variados, cinco cursos, oito sem
 
 | Método/API | Contrato |
 |---|---|
-| `POST /api/surveys/research/start` | `{ profile: { course, semester, device, internet, help } }` |
+| `POST /api/surveys/research/start` | `{ profile: { area } }` |
 | `POST /api/surveys/fair/start` | `{}` |
 | `GET /api/sessions/:sessionId` | Sessão, perguntas públicas e estado de conclusão |
 | `POST /api/sessions/:sessionId/submit` | `{ answers: [{ questionId, optionId }] }` |
 | `GET /api/sessions/:sessionId/result` | Totais, percentuais, feedback e competências apresentadas |
-| `GET /api/dashboard/summary` | Filtros opcionais `course`, `semester`, `device`, `internet` |
+| `GET /api/dashboard/summary` | Filtro opcional `area` |
+
+A pesquisa atende estudantes e público geral. O único dado de perfil coletado é **Área de estudo ou atuação**, em categorias padronizadas de `shared/config.ts`, com “Outra área”, “Não estudo nem atuo em uma área no momento” e “Prefiro não informar”. A área serve somente para comparação descritiva de grupos e não influencia perguntas ou pontuação. Não se coletam mais curso, semestre, dispositivo, acesso à internet ou necessidade de ajuda.
+
+Dados históricos permanecem no banco, mas não são convertidos em áreas presumidas. Participações anteriores sem área entram na amostra geral e, quando o tamanho permite, na distribuição como “Participações anteriores (área não coletada)”; não entram em filtros de uma área específica. As proteções de grupos pequenos continuam valendo. Novas participações deixam os cinco campos antigos nulos.
 
 Campos extras ou valores inválidos são rejeitados. O início retorna `{ sessionId, accessToken, mode, completed, questions }`. `accessToken` tem 32 bytes aleatórios (256 bits), é retornado somente na criação e deve ser enviado em **todas** as requisições a `/api/sessions/:sessionId` (incluindo `/submit` e `/result`) pelo header:
 
@@ -178,13 +183,13 @@ Na conclusão, um `updateMany` condicionado a `status=IN_PROGRESS` bloqueia a li
 
 O máximo de cada eixo vem somente das questões apresentadas. Eixos ausentes são omitidos. O desafio não recebe percentual global. Empates aparecem sem escolher arbitrariamente uma competência.
 
-`padi:research:v2` guarda sessão em andamento, token e respostas locais, ou `{completed:true,sessionId,accessToken}` ao concluir. A retomada busca as perguntas originais na API, sem novo sorteio. Pesquisa concluída oferece “Ver meu resultado”, sem botão para apagar a participação. `padi:fair:v2` é separado e permite novo desafio. Armazenamento bloqueado gera aviso e não impede responder: o segredo fica na memória durante a visita, mas não há garantia de retomada após fechar/recarregar.
+`padi:research:v2` guarda sessão em andamento, token e respostas locais, ou `{completed:true,sessionId,accessToken}` ao concluir. A retomada busca as perguntas originais na API, sem novo sorteio. Ao voltar espontaneamente à pesquisa ou ao desafio, uma participação concluída não bloqueia um novo início. A sessão em andamento continua sendo retomada. Não há botão para refazer no resultado. `padi:fair:v2` é separado. Armazenamento bloqueado gera aviso e não impede responder: o segredo fica na memória durante a visita, mas não há garantia de retomada após fechar/recarregar.
 
-**Sessões anteriores à proteção por token:** continuam no banco e nos agregados, mas ficam sem acesso individual; não existe recuperação segura a partir apenas do UUID de uma participação anônima. Marcadores v1 concluídos são respeitados para evitar repetição acidental e mostram uma explicação da atualização. Apenas uma participação antiga incompleta e sem segredo permite começar uma nova sessão; a anterior continua preservada no banco. Nenhum token é derivado do UUID nem há endpoint para reivindicar sessões antigas. Perder o armazenamento local/segredo de uma sessão nova também impede recuperá-la por identidade, pois não coletamos dados identificadores.
+**Sessões anteriores à proteção por token:** continuam no banco e nos agregados, mas ficam sem acesso individual; não existe recuperação segura a partir apenas do UUID de uma participação anônima. Marcadores v1 concluídos não bloqueiam novas participações. Uma participação antiga incompleta e sem segredo oferece recuperação por um novo início explícito; a anterior continua preservada no banco. Nenhum token é derivado do UUID nem há endpoint para reivindicar sessões antigas. Perder o armazenamento local/segredo de uma sessão nova também impede recuperá-la por identidade, pois não coletamos dados identificadores.
 
 ## Dashboard e privacidade
 
-Prisma utiliza count e groupBy para contagens, médias dos percentuais individuais, médias/distribuições por competência, desempenho por questão e distribuições contextuais. Nenhum conjunto de respostas brutas é enviado. Pesquisa incompleta e desafio ficam fora das métricas.
+Prisma utiliza count e groupBy para contagens, médias dos percentuais individuais, médias/distribuições por competência, desempenho por questão e distribuição por área. Nenhum conjunto de respostas brutas é enviado. Pesquisa incompleta e desafio ficam fora das métricas.
 
 Filtros começam em “Todos”, podem ser combinados e atualizam as métricas. Comparação com amostra geral usa percentuais normalizados. Questões aparecem do menor para o maior percentual médio, com n e distribuição dos scores quando permitida.
 

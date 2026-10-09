@@ -99,6 +99,7 @@ model ProfileOption {
   devices   ParticipantProfile[] @relation("device")
   internets ParticipantProfile[] @relation("internet")
   helps     ParticipantProfile[] @relation("help")
+  areas     ParticipantProfile[] @relation("area")
 
   @@id([kind, value])
   @@map("profile_options")
@@ -128,24 +129,30 @@ model SurveySession {
 }
 
 model ParticipantProfile {
-  sessionId      String        @id @map("session_id") @db.Uuid
-  course         String
-  semester       String
-  device         String
-  internet       String
-  help           String
-  courseKind     String        @default("course") @map("course_kind")
-  semesterKind   String        @default("semester") @map("semester_kind")
-  deviceKind     String        @default("device") @map("device_kind")
-  internetKind   String        @default("internet") @map("internet_kind")
-  helpKind       String        @default("help") @map("help_kind")
-  session        SurveySession @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  courseOption   ProfileOption @relation("course", fields: [courseKind, course], references: [kind, value], onDelete: NoAction, onUpdate: NoAction)
-  semesterOption ProfileOption @relation("semester", fields: [semesterKind, semester], references: [kind, value], onDelete: NoAction, onUpdate: NoAction)
-  deviceOption   ProfileOption @relation("device", fields: [deviceKind, device], references: [kind, value], onDelete: NoAction, onUpdate: NoAction)
-  internetOption ProfileOption @relation("internet", fields: [internetKind, internet], references: [kind, value], onDelete: NoAction, onUpdate: NoAction)
-  helpOption     ProfileOption @relation("help", fields: [helpKind, help], references: [kind, value], onDelete: NoAction, onUpdate: NoAction)
+  // Historical fields stay nullable to preserve existing participation data.
+  area       String?
+  areaKind   String         @default("area") @map("area_kind")
+  areaOption ProfileOption? @relation("area", fields: [areaKind, area], references: [kind, value], onDelete: NoAction, onUpdate: NoAction)
 
+  sessionId      String         @id @map("session_id") @db.Uuid
+  course         String?
+  semester       String?
+  device         String?
+  internet       String?
+  help           String?
+  courseKind     String         @default("course") @map("course_kind")
+  semesterKind   String         @default("semester") @map("semester_kind")
+  deviceKind     String         @default("device") @map("device_kind")
+  internetKind   String         @default("internet") @map("internet_kind")
+  helpKind       String         @default("help") @map("help_kind")
+  session        SurveySession  @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  courseOption   ProfileOption? @relation("course", fields: [courseKind, course], references: [kind, value], onDelete: NoAction, onUpdate: NoAction)
+  semesterOption ProfileOption? @relation("semester", fields: [semesterKind, semester], references: [kind, value], onDelete: NoAction, onUpdate: NoAction)
+  deviceOption   ProfileOption? @relation("device", fields: [deviceKind, device], references: [kind, value], onDelete: NoAction, onUpdate: NoAction)
+  internetOption ProfileOption? @relation("internet", fields: [internetKind, internet], references: [kind, value], onDelete: NoAction, onUpdate: NoAction)
+  helpOption     ProfileOption? @relation("help", fields: [helpKind, help], references: [kind, value], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([area], map: "profiles_area")
   @@index([course], map: "profiles_course")
   @@index([semester], map: "profiles_semester")
   @@index([device], map: "profiles_device")

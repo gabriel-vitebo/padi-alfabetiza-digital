@@ -49,17 +49,14 @@ async function aggregate(db: Transaction, filters: Filters): Promise<Aggregate> 
     join padi.profiles p on p.session_id=s.id
     join padi.session_questions sq on sq.session_id=a.session_id and sq.question_id=a.question_id
     where s.mode='research' and s.status='COMPLETED'
-      and (${filters.course ?? null}::text is null or p.course=${filters.course ?? null})
-      and (${filters.semester ?? null}::text is null or p.semester=${filters.semester ?? null})
-      and (${filters.device ?? null}::text is null or p.device=${filters.device ?? null})
-      and (${filters.internet ?? null}::text is null or p.internet=${filters.internet ?? null})
+      and (${filters.area ?? null}::text is null or p.area=${filters.area ?? null})
     group by a.question_id having count(*) >= ${minimum} order by average,a.question_id`)
   const scores = await db.surveyAnswer.groupBy({ by: ['questionId', 'score'],
     where: { option: { question: { session: selected } } }, _count: true, orderBy: { score: 'desc' } })
   const demographics: Aggregate['demographics'] = {}
-  for (const key of ['course','semester','device','internet','help'] as const) {
+  for (const key of ['area'] as const) {
     const rows = await db.participantProfile.groupBy({ by: [key], where: { session: selected }, _count: true })
-    demographics[key] = protectDistribution(rows.map(r => ({ value: r[key], count: r._count })).sort((a,b) => b.count - a.count))
+    demographics[key] = protectDistribution(rows.map(r => ({ value: r[key] ?? '__legacy__', count: r._count })).sort((a,b) => b.count - a.count))
   }
   return { count, average, syntheticCount, competencies,
     questions: questions.map(q => ({ ...q, distribution: protectDistribution(scores.filter(s => s.questionId === q.id).map(s => ({value: String(s.score), count: s._count}))) })), demographics }

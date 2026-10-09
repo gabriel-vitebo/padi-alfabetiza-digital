@@ -64,7 +64,7 @@ Foi corrigida uma falha real do seed: `prisma db seed` chamado diretamente por N
 
 Playwright usa o build real (`.output/server/index.mjs`) na porta local 3107 e PostgreSQL Docker. As APIs não foram mockadas. Chrome já instalado foi utilizado com `PLAYWRIGHT_CHANNEL=chrome`.
 
-Cenários: pesquisa mobile com 14 perguntas apesar de `?total=1`, retomada e foco após reload, payload sem scores, token exigido, conclusão/resultado persistente, acesso negado em outro navegador, prevenção local de repetição; desafio com cinco perguntas e resultado limitado; dashboard com canvas/tabela/filtros/amostra insuficiente; validação HTTP de entradas inválidas; tratamento dos marcadores legados.
+Cenários: pesquisa mobile com 14 perguntas apesar de `?total=1`, retomada e foco após reload, payload sem scores, token exigido, conclusão/resultado persistente, acesso negado em outro navegador, nova participação ao voltar espontaneamente, sem botão de refazer; desafio com cinco perguntas e resultado limitado; dashboard com canvas/tabela/filtros/amostra insuficiente; validação HTTP de entradas inválidas; tratamento dos marcadores legados.
 
 ## Limitações externas
 

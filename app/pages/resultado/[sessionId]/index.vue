@@ -58,7 +58,6 @@ watch(result, value => {
       </section>
       <p class="text-sm text-slate-400">Consulte este resultado no mesmo navegador e dispositivo. O link sozinho não permite acesso à sua participação.</p>
       <UButton to="/" variant="outline">Voltar ao início</UButton>
-      <UButton v-if="result.mode === 'fair'" to="/desafio" class="ml-3">Voltar ao desafio</UButton>
     </template>
   </section>
 </template>

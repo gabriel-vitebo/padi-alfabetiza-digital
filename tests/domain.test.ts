@@ -72,9 +72,12 @@ test('public question projection never exposes internal metadata', () => {
 })
 test('filters and contextual options reject unknown keys, values and arrays', () => {
   assert.equal(filtersSchema.safeParse({}).success,true)
-  assert.equal(filtersSchema.safeParse({course:'computacao',semester:'2'}).success,true)
-  for(const input of [{course:'unknown'},{total:'5'},{device:['celular']},{semester:'0'}]) assert.equal(filtersSchema.safeParse(input).success,false)
-  assert.equal(profileSchema.safeParse({course:'computacao',semester:'1',device:'celular',internet:'regular',help:'nunca'}).success,true)
+  assert.equal(filtersSchema.safeParse({area:'tecnologia'}).success,true)
+  for(const input of [{area:'unknown'},{total:'5'},{area:['tecnologia']},{course:'computacao'},{semester:'1'}]) assert.equal(filtersSchema.safeParse(input).success,false)
+  for (const area of ['tecnologia','servicos','sem-area','prefiro-nao-informar'])
+    assert.equal(profileSchema.safeParse({area}).success,true)
+  for (const input of [{}, {area:''}, {area:'unknown'}, {area:'tecnologia',course:'computacao'}])
+    assert.equal(profileSchema.safeParse(input).success,false)
 })
 test('production seed and remote resets fail closed', () => {
   assert.throws(()=>assertDevelopmentSeed('production'))
@@ -104,11 +107,10 @@ test('session access requires an independent secret, fails closed for legacy ses
   assert.throws(() => assertSessionAccess(null,first.accessToken), {statusCode:403})
 })
 
-test('combined filters check every ancestor, not just the whole sample', async () => {
+test('area filter checks the overall sample for small complements', async () => {
   const { filterAncestors, isSmallRemainder } = await import('../server/domain/aggregate-privacy')
-  const ancestors = filterAncestors({course:'computacao',semester:'1',device:'celular'})
-  assert.equal(ancestors.length,7)
-  assert.ok(ancestors.some(f => f.course === 'computacao' && f.semester === '1' && !f.device))
+  const ancestors = filterAncestors({area:'tecnologia'})
+  assert.equal(ancestors.length,1)
   assert.ok(ancestors.some(f => Object.keys(f).length === 0))
   assert.equal(isSmallRemainder(8,5),true)
   assert.equal(isSmallRemainder(10,5),false)

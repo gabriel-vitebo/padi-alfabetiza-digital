@@ -7,7 +7,7 @@ import { dashboardSummary } from '../../server/domain/dashboard'
 if (getEnvironment() !== 'local' || !new URL(process.env.DATABASE_URL!).pathname.endsWith('_test')) throw new Error('Testes exigem APP_ENV=local e banco com sufixo _test')
 const sql=createDatabase()
 const ids:string[]=[]
-const profile={course:'computacao',semester:'1',device:'computador',internet:'regular',help:'raramente'}
+const profile={area:'tecnologia'}
 before(async()=>{const count=await sql.surveySession.count();assert.equal(count,0,'Use banco de teste vazio')})
 after(async()=>{ if(ids.length) await sql.$transaction(async tx=>{
   await tx.surveyAnswer.deleteMany({where:{sessionId:{in:ids}}})
@@ -64,19 +64,28 @@ test('atomic persistence, concurrent completion, immutable snapshot and dashboar
   await submitSession(sql,fair.sessionId,fair.questions.map(q=>({questionId:q.id,optionId:'B'})),fair.accessToken)
   assert.equal((await getResult(sql,fair.sessionId,fair.accessToken)).overallPercentage,null)
   for(let i=0;i<9;i++) {
-    const s=await startSession(sql,'research',{...profile,course:i<4?'computacao':'outro'});ids.push(s.sessionId)
+    const s=await startSession(sql,'research',{area:i<4?'tecnologia':'outra'});ids.push(s.sessionId)
     await submitSession(sql,s.sessionId,s.questions.map(q=>({questionId:q.id,optionId:i<4?'A':'B'})),s.accessToken)
   }
   const all=await dashboardSummary(sql,{})
   assert.equal(all.status,'ready');assert.equal(all.segment?.count,10);assert.equal(all.segment?.average,75)
-  const filtered=await dashboardSummary(sql,{course:'computacao'})
+  const filtered=await dashboardSummary(sql,{area:'tecnologia'})
   assert.equal(filtered.segment?.count,5);assert.equal(filtered.segment?.average,100);assert.equal(filtered.overall?.average,75)
-  assert.equal((await dashboardSummary(sql,{device:'celular'})).status,'insufficient')
-  // An eight-person course with a five-person subsegment leaves three people.
-  // Comparing only against the whole sample would miss this disclosure.
-  for(let i=0;i<3;i++) {
-    const s=await startSession(sql,'research',{...profile,semester:'2'});ids.push(s.sessionId)
-    await submitSession(sql,s.sessionId,s.questions.map(q=>({questionId:q.id,optionId:'A'})),s.accessToken)
-  }
-  assert.equal((await dashboardSummary(sql,{course:'computacao',semester:'1'})).status,'insufficient')
+  assert.equal((await dashboardSummary(sql,{area:'sem-area'})).status,'insufficient')
+  assert.deepEqual(Object.keys(all.segment!.demographics),['area'])
+  const savedProfile=await sql.participantProfile.findUniqueOrThrow({where:{sessionId:session.sessionId}})
+  assert.equal(savedProfile.area,'tecnologia')
+  for(const field of ['course','semester','device','internet','help'] as const) assert.equal(savedProfile[field],null)
+  await assert.rejects(sql.participantProfile.update({where:{sessionId:session.sessionId},data:{area:'invalid'}}))
+  // Old participation with no collected area remains in the overall sample.
+  await sql.participantProfile.update({where:{sessionId:session.sessionId},data:{area:null}})
+  const withLegacy=await dashboardSummary(sql,{})
+  assert.equal(withLegacy.segment?.count,10)
+  assert.equal(withLegacy.segment?.average,75)
+  assert.equal(withLegacy.segment?.demographics.area,null) // one legacy participant is suppressed
+  await sql.participantProfile.update({where:{sessionId:session.sessionId},data:{area:'tecnologia'}})
+  const otherProfiles=await sql.participantProfile.findMany({where:{area:'outra'},take:3})
+  await sql.participantProfile.updateMany({where:{sessionId:{in:otherProfiles.map(p=>p.sessionId)}},data:{area:'tecnologia'}})
+  // Eight selected out of ten leaves a protected complement of two.
+  assert.equal((await dashboardSummary(sql,{area:'tecnologia'})).status,'insufficient')
 })

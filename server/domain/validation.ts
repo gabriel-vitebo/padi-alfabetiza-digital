@@ -4,10 +4,10 @@ import type { StoredQuestion } from './types'
 export const modeSchema = z.enum(['research', 'fair'])
 export const sessionIdSchema = z.uuid()
 const option = (key: keyof typeof contextualOptions) => z.string().refine(value => contextualOptions[key].some(o => o.value === value))
-export const profileSchema = z.object({ course: option('course'), semester: option('semester'), device: option('device'), internet: option('internet'), help: option('help') }).strict()
+export const profileSchema = z.object({ area: option('area') }).strict()
 export const startSchema = z.object({ profile: profileSchema.optional() }).strict()
 export const answersSchema = z.object({ answers: z.array(z.object({ questionId: z.string().min(1).max(80), optionId: z.string().min(1).max(80) }).strict()).min(1).max(200) }).strict()
-export const filtersSchema = z.object({ course: option('course').optional(), semester: option('semester').optional(), device: option('device').optional(), internet: option('internet').optional() }).strict()
+export const filtersSchema = z.object({ area: option('area').optional() }).strict()
 export type Filters = z.infer<typeof filtersSchema>
 export class SurveyError extends Error {
   constructor(public statusCode: number, message: string) { super(message) }
