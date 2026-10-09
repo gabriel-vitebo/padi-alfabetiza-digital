@@ -1,4 +1,4 @@
-import type { Question } from '~/types/diagnostic'
+import type { StoredQuestion as Question } from '../domain/types'
 
 export const diagnosticQuestions: Question[] = [
   {

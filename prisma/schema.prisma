@@ -1,0 +1,216 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../server/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["padi"]
+}
+
+enum SurveyMode {
+  research
+  fair
+
+  @@schema("padi")
+}
+
+enum SessionStatus {
+  IN_PROGRESS
+  COMPLETED
+
+  @@schema("padi")
+}
+
+enum QuestionContextType {
+  diagnostico
+  feira
+
+  @@schema("padi")
+}
+
+model Environment {
+  singleton   Boolean @id @default(true)
+  environment String
+
+  @@map("environment")
+  @@schema("padi")
+}
+
+model Competency {
+  id               String             @id
+  label            String
+  description      String
+  questions        Question[]
+  sessionQuestions SessionQuestion[]
+  results          CompetencyResult[]
+
+  @@map("competencies")
+  @@schema("padi")
+}
+
+model Question {
+  id               String            @id
+  competencyId     String            @map("competency_id")
+  title            String
+  statement        String
+  justification    String
+  active           Boolean           @default(true)
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  competency       Competency        @relation(fields: [competencyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  contexts         QuestionContext[]
+  options          QuestionOption[]
+  sessionQuestions SessionQuestion[]
+
+  @@index([competencyId, active])
+  @@map("questions")
+  @@schema("padi")
+}
+
+model QuestionContext {
+  questionId String              @map("question_id")
+  context    QuestionContextType
+  question   Question            @relation(fields: [questionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([questionId, context])
+  @@map("question_contexts")
+  @@schema("padi")
+}
+
+model QuestionOption {
+  questionId String   @map("question_id")
+  id         String
+  label      String
+  score      Int      @db.SmallInt
+  question   Question @relation(fields: [questionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([questionId, id])
+  @@map("options")
+  @@schema("padi")
+}
+
+model ProfileOption {
+  kind      String
+  value     String
+  label     String
+  courses   ParticipantProfile[] @relation("course")
+  semesters ParticipantProfile[] @relation("semester")
+  devices   ParticipantProfile[] @relation("device")
+  internets ParticipantProfile[] @relation("internet")
+  helps     ParticipantProfile[] @relation("help")
+
+  @@id([kind, value])
+  @@map("profile_options")
+  @@schema("padi")
+}
+
+model SurveySession {
+  id              String              @id @default(uuid()) @db.Uuid
+  mode            SurveyMode
+  status          SessionStatus       @default(IN_PROGRESS)
+  createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  completedAt     DateTime?           @map("completed_at") @db.Timestamptz
+  accessTokenHash String?             @map("access_token_hash")
+  questionCount   Int                 @map("question_count")
+  synthetic       Boolean             @default(false)
+  earnedScore     Int?                @map("earned_score")
+  maxScore        Int?                @map("max_score")
+  profile         ParticipantProfile?
+  questions       SessionQuestion[]
+  results         CompetencyResult[]
+
+  @@index([mode, completedAt])
+  @@index([synthetic])
+  @@map("sessions")
+  @@schema("padi")
+}
+
+model ParticipantProfile {
+  sessionId      String        @id @map("session_id") @db.Uuid
+  course         String
+  semester       String
+  device         String
+  internet       String
+  help           String
+  courseKind     String        @default("course") @map("course_kind")
+  semesterKind   String        @default("semester") @map("semester_kind")
+  deviceKind     String        @default("device") @map("device_kind")
+  internetKind   String        @default("internet") @map("internet_kind")
+  helpKind       String        @default("help") @map("help_kind")
+  session        SurveySession @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  courseOption   ProfileOption @relation("course", fields: [courseKind, course], references: [kind, value], onDelete: NoAction, onUpdate: NoAction)
+  semesterOption ProfileOption @relation("semester", fields: [semesterKind, semester], references: [kind, value], onDelete: NoAction, onUpdate: NoAction)
+  deviceOption   ProfileOption @relation("device", fields: [deviceKind, device], references: [kind, value], onDelete: NoAction, onUpdate: NoAction)
+  internetOption ProfileOption @relation("internet", fields: [internetKind, internet], references: [kind, value], onDelete: NoAction, onUpdate: NoAction)
+  helpOption     ProfileOption @relation("help", fields: [helpKind, help], references: [kind, value], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([course], map: "profiles_course")
+  @@index([semester], map: "profiles_semester")
+  @@index([device], map: "profiles_device")
+  @@index([internet], map: "profiles_internet")
+  @@map("profiles")
+  @@schema("padi")
+}
+
+model SessionQuestion {
+  sessionId    String          @map("session_id") @db.Uuid
+  questionId   String          @map("question_id")
+  position     Int
+  competencyId String          @map("competency_id")
+  snapshot     Json            @db.JsonB
+  maxScore     Int             @map("max_score") @db.SmallInt
+  session      SurveySession   @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  question     Question        @relation(fields: [questionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  competency   Competency      @relation(fields: [competencyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  options      SessionOption[]
+
+  @@id([sessionId, questionId])
+  @@unique([sessionId, position])
+  @@index([questionId])
+  @@map("session_questions")
+  @@schema("padi")
+}
+
+model SessionOption {
+  sessionId  String          @map("session_id") @db.Uuid
+  questionId String          @map("question_id")
+  optionId   String          @map("option_id")
+  label      String
+  score      Int             @db.SmallInt
+  question   SessionQuestion @relation(fields: [sessionId, questionId], references: [sessionId, questionId], onDelete: Cascade, onUpdate: NoAction)
+  answers    SurveyAnswer[]
+
+  @@id([sessionId, questionId, optionId])
+  @@map("session_options")
+  @@schema("padi")
+}
+
+model SurveyAnswer {
+  sessionId  String        @map("session_id") @db.Uuid
+  questionId String        @map("question_id")
+  optionId   String        @map("option_id")
+  score      Int           @db.SmallInt
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  option     SessionOption @relation(fields: [sessionId, questionId, optionId], references: [sessionId, questionId, optionId], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([sessionId, questionId])
+  @@index([questionId], map: "answers_question")
+  @@map("answers")
+  @@schema("padi")
+}
+
+model CompetencyResult {
+  sessionId    String        @map("session_id") @db.Uuid
+  competencyId String        @map("competency_id")
+  earnedScore  Int           @map("earned_score")
+  maxScore     Int           @map("max_score")
+  session      SurveySession @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  competency   Competency    @relation(fields: [competencyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([sessionId, competencyId])
+  @@index([competencyId], map: "results_competency")
+  @@map("competency_results")
+  @@schema("padi")
+}

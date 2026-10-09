@@ -1,4 +1,5 @@
-import { competencyIds, type CompetencyId, type Question, type QuestionContext } from '~/types/diagnostic'
+import type { StoredQuestion as Question } from './types'
+import { competencyIds, type CompetencyId, type QuestionContext } from '../../shared/diagnostic'
 
 type Random = () => number
 
@@ -29,8 +30,10 @@ const shuffle = <T>(items: T[], random: Random): T[] => {
 
 export const selectQuestions = ({ questions, total, context, random = Math.random }: SelectQuestionsInput): Question[] => {
   const eligible = questions.filter(question => question.contexts.includes(context))
-  const target = Math.min(Math.max(Math.floor(total), 0), eligible.length)
-  if (target === 0) return []
+  if (!Number.isInteger(total) || total < 1 || total > eligible.length) throw new Error('Quantidade de questões indisponível')
+  if (new Set(eligible.map(q => q.id)).size !== eligible.length) throw new Error('Questões duplicadas')
+  if (total >= competencyIds.length && competencyIds.some(id => !eligible.some(q => q.competency === id))) throw new Error('Banco sem todos os eixos')
+  const target = total
 
   const byCompetency = new Map<CompetencyId, Question[]>()
   for (const competency of competencyIds) {

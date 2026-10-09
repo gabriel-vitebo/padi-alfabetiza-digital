@@ -3,22 +3,64 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "nuxt build",
+    "build": "prisma generate && nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "prisma generate && nuxt prepare",
+    "lint": "eslint .",
+    "typecheck": "nuxt typecheck",
+    "test": "tsx --test tests/*.test.ts",
+    "test:integration": "node --env-file-if-exists=.env --import tsx --test tests/integration/*.test.ts",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:migrate": "pnpm db:migrate:deploy",
+    "db:seed": "node --env-file-if-exists=.env node_modules/prisma/build/index.js db seed",
+    "db:seed:dev": "node --env-file-if-exists=.env --import tsx scripts/seed-dev.ts",
+    "test:e2e": "node --env-file-if-exists=.env node_modules/@playwright/test/cli.js test",
+    "db:migrate:dev": "node --env-file-if-exists=.env --import tsx scripts/migrate.ts dev",
+    "db:migrate:deploy": "node --env-file-if-exists=.env --import tsx scripts/migrate.ts deploy",
+    "db:baseline": "node --env-file-if-exists=.env --import tsx scripts/migrate.ts baseline",
+    "prisma:generate": "prisma generate",
+    "prisma:studio": "node --env-file-if-exists=.env --import tsx scripts/migrate.ts studio",
+    "prisma:format": "prisma format",
+    "prisma:validate": "prisma validate",
+    "db:migrate:status": "node --env-file-if-exists=.env node_modules/prisma/build/index.js migrate status"
   },
   "dependencies": {
     "@nuxt/ui": "4.11.1",
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
+    "chart.js": "^4.5.1",
+    "dotenv": "18.0.6",
     "nuxt": "^4.5.2",
     "tailwindcss": "^4.3.3",
     "vue": "^3.5.42",
-    "vue-router": "^5.3.1"
+    "vue-chartjs": "^5.3.4",
+    "vue-router": "^5.3.1",
+    "zod": "^4.6.5"
   },
   "packageManager": "pnpm@10.14.0+sha512.ad27a79641b49c3e481a16a805baa71817a04bbe06a38d17e60e2eaee83f6a146c6a688125f5792e48dd5ba30e7da52a5cda4c3992b9ccf333f9ce223af84748",
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.4",
+    "eslint": "^10.12.0",
+    "eslint-plugin-vue": "^10.11.1",
+    "prisma": "7.10.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.71.1",
+    "vue-eslint-parser": "^10.4.1",
     "vue-tsc": "^3.3.11"
+  },
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/engines",
+      "prisma"
+    ]
   }
 }

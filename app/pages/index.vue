@@ -10,10 +10,10 @@
           Esta aplicação faz parte de uma pesquisa acadêmica sobre alfabetização e competências digitais. Queremos compreender como estudantes lidam com situações relacionadas ao uso consciente, crítico e seguro da tecnologia.
         </p>
         <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <UButton to="/perguntas" size="xl" color="primary" trailing-icon="i-lucide-arrow-right" class="justify-center sm:justify-start">
-            Iniciar diagnóstico
+          <UButton to="/pesquisa" size="xl" color="primary" trailing-icon="i-lucide-arrow-right" class="justify-center sm:justify-start">
+            Participar da pesquisa
           </UButton>
-          <span class="text-center text-sm text-slate-400 sm:text-left">Uma etapa futura da pesquisa</span>
+          <span class="text-center text-sm text-slate-400 sm:text-left">Pesquisa anônima · sete competências</span>
         </div>
       </div>
 
@@ -21,7 +21,7 @@
         <div class="absolute -right-16 -top-16 size-48 rounded-full border-24 border-slate-800/80" aria-hidden="true"></div>
         <div class="relative flex min-h-64 flex-col justify-between sm:min-h-72">
           <div class="flex items-center justify-between">
-            <span class="rounded-full border border-teal-800 bg-teal-950/60 px-3 py-1 text-xs font-semibold text-teal-200">Pesquisa em construção</span>
+            <span class="rounded-full border border-teal-800 bg-teal-950/60 px-3 py-1 text-xs font-semibold text-teal-200">Programa PADI</span>
             <span class="text-2xl text-teal-300" aria-hidden="true">✦</span>
           </div>
           <div>

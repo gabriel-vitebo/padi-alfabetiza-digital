@@ -1,4 +1,5 @@
-import { type CompetencyId, competencyLabels, type DiagnosticResult, type Question } from '~/types/diagnostic'
+import type { StoredQuestion as Question } from './types'
+import { type CompetencyId, type DiagnosticResult } from '../../shared/diagnostic'
 
 export const diagnosticFeedback = (percentage: number) => {
   if (percentage < 40) return 'Há oportunidades importantes para desenvolver esta competência.'
@@ -38,9 +39,9 @@ export const calculateDiagnosticResult = (
   })
 
   return {
+    earnedScore: earnedTotal,
+    maxScore: maximumTotal,
     overallPercentage: maximumTotal === 0 ? 0 : (earnedTotal / maximumTotal) * 100,
     competencies: results
   }
 }
-
-export const getCompetencyLabel = (competency: CompetencyId) => competencyLabels[competency]
