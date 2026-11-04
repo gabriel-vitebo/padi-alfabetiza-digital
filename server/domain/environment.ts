@@ -2,7 +2,10 @@ export type AppEnvironment = 'local' | 'homolog' | 'production'
 export function getEnvironment(env: NodeJS.ProcessEnv = process.env): AppEnvironment {
   const value = env.APP_ENV
   if (value !== 'local' && value !== 'homolog' && value !== 'production') throw new Error('Configure APP_ENV: local, homolog ou production')
-  if (env.VERCEL_ENV === 'production' && value !== 'production') throw new Error('Vercel Production exige APP_ENV=production')
+  const allowHomologOnProduction = env.VERCEL_ENV === 'production'
+    && value === 'homolog'
+    && env.ALLOW_PRODUCTION_HOMOLOG === 'true'
+  if (env.VERCEL_ENV === 'production' && value !== 'production' && !allowHomologOnProduction) throw new Error('Vercel Production exige APP_ENV=production (ou homologação explicitamente autorizada)')
   if (env.VERCEL_ENV === 'preview' && value !== 'homolog') throw new Error('Vercel Preview exige APP_ENV=homolog')
   return value
 }

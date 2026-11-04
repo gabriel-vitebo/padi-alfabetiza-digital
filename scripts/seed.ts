@@ -34,6 +34,6 @@ try {
     for (const [kind, options] of Object.entries(contextualOptions)) for (const o of options)
       await tx.profileOption.upsert({ where: { kind_value: { kind, value: o.value } },
         create: { kind, ...o }, update: { label: o.label } })
-  })
+  }, { maxWait: 10_000, timeout: 120_000 })
   console.info('Seed estrutural: 7 competências, 28 questões e 112 alternativas.')
 } finally { await db.$disconnect() }
