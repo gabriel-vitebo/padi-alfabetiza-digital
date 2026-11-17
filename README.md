@@ -11,7 +11,7 @@ Homolog: Vercel Preview + Supabase Homolog
 Production: Vercel Production + Supabase Production
 ```
 
-Somente Nitro conhece a conexão e os scores. Nenhum cliente Supabase, cadastro/login de participante ou serviço separado. O acesso individual exige um token secreto emitido ao iniciar a sessão. As 28 questões e sete eixos são os de `banco-questoes-padi.md`, sem alteração. O documento ainda contém a proposta antiga de `?total`; a regra vigente está em `shared/config.ts`, e parâmetros de URL não alteram a quantidade.
+Somente Nitro conhece a conexão e os scores. Nenhum cliente Supabase, cadastro/login de participante ou serviço separado. O acesso individual exige um token secreto emitido ao iniciar a sessão. O banco mantém 28 questões e sete eixos; Q01 e Q05 foram simplificadas para introduzir uso da internet nos estudos e avaliação de fontes. A pesquisa principal sorteia 10 questões, incluindo essas duas perguntas. O documento ainda contém exemplos antigos de `?total`; a regra vigente está em `shared/config.ts`, e parâmetros de URL não alteram a quantidade.
 
 | Ambiente | Banco | Dados fictícios | Uso |
 |---|---|---|---|
@@ -146,17 +146,18 @@ O seed fictício usa perfis de acesso/autonomia variados, cinco cursos, oito sem
 
 | Rota | Função |
 |---|---|
-| `/pesquisa` | Apresentação, área de estudo ou atuação e 14 questões |
+| `/pesquisa` | Apresentação, área de estudo ou atuação e 10 questões |
 | `/desafio` | Cinco questões elegíveis para feira em eixos distintos |
 | `/resultado/:sessionId` | Resultado persistido, consultável ao recarregar |
-| `/dashboard` | Agregações da pesquisa concluída e comparação de segmentos |
+| `/dashboard` | Médias das pesquisas concluídas e métricas agregadas por pergunta |
 | `/diagnostico`, `/perguntas` | Compatibilidade: redirecionam para `/pesquisa`, sem parâmetros de quantidade |
 
 | Método/API | Contrato |
 |---|---|
 | `POST /api/surveys/research/start` | `{ profile: { area } }` |
 | `POST /api/surveys/fair/start` | `{}` |
-| `GET /api/sessions/:sessionId` | Sessão, perguntas públicas e estado de conclusão |
+| `GET /api/sessions/:sessionId` | Sessão, perguntas públicas, respostas salvas e estado de conclusão |
+| `POST /api/sessions/:sessionId/answer` | `{ questionId, optionId }`; salva ou atualiza uma resposta |
 | `POST /api/sessions/:sessionId/submit` | `{ answers: [{ questionId, optionId }] }` |
 | `GET /api/sessions/:sessionId/result` | Totais, percentuais, feedback e competências apresentadas |
 | `GET /api/dashboard/summary` | Filtro opcional `area` |
@@ -165,7 +166,7 @@ A pesquisa atende estudantes e público geral. O único dado de perfil coletado 
 
 Dados históricos permanecem no banco, mas não são convertidos em áreas presumidas. Participações anteriores sem área entram na amostra geral e, quando o tamanho permite, na distribuição como “Participações anteriores (área não coletada)”; não entram em filtros de uma área específica. As proteções de grupos pequenos continuam valendo. Novas participações deixam os cinco campos antigos nulos.
 
-Campos extras ou valores inválidos são rejeitados. O início retorna `{ sessionId, accessToken, mode, completed, questions }`. `accessToken` tem 32 bytes aleatórios (256 bits), é retornado somente na criação e deve ser enviado em **todas** as requisições a `/api/sessions/:sessionId` (incluindo `/submit` e `/result`) pelo header:
+Campos extras ou valores inválidos são rejeitados. O início retorna `{ sessionId, accessToken, mode, completed, questions, answers }`. `accessToken` tem 32 bytes aleatórios (256 bits), é retornado somente na criação e deve ser enviado em **todas** as requisições a `/api/sessions/:sessionId` (incluindo `/answer`, `/submit` e `/result`) pelo header:
 
 ```http
 Authorization: Bearer <accessToken>
@@ -175,11 +176,11 @@ O servidor armazena somente SHA-256 do token e verifica o acesso antes de retorn
 
 ## Seleção, submissão e retomada
 
-`shared/config.ts` centraliza quantidades, contextos, opções e limite mínimo. O algoritmo agrupa questões ativas/elegíveis por eixo, sorteia eixos distintos inicialmente, preenche priorizando os menos representados e embaralha a ordem final. Rejeita quantidade impossível e falta de um dos sete eixos para sessões de pelo menos sete questões. Com 14, são duas por eixo; com cinco na feira, cinco eixos distintos.
+`shared/config.ts` centraliza quantidades, contextos, opções e limite mínimo. A pesquisa apresenta 10 questões: inclui Q01 (uso da internet para estudar) e Q05 (como avaliar fontes confiáveis), depois sorteia de forma balanceada para cobrir os sete eixos, com três eixos recebendo uma pergunta adicional. O desafio apresenta cinco eixos distintos. A ordem é embaralhada.
 
 A sessão e as perguntas são gravadas em transação antes do retorno ao navegador. A projeção pública contém somente ID, competência, enunciado e alternativas ID/label. O banco TypeScript com scores está em `server/`, nunca em `app/`.
 
-Na conclusão, um `updateMany` condicionado a `status=IN_PROGRESS` bloqueia a linha da sessão dentro de `$transaction`. Uma conclusão concorrente aguarda e recebe 409 quando a condição deixa de ser satisfeita. A mesma transação valida estado, pertencimento, alternativas, completude e duplicidade; grava respostas/resultados; marca conclusão. Submissão concorrente ou repetida recebe 409. Se o navegador perder a resposta do envio, consulta o estado e recupera o resultado já persistido.
+Ao selecionar uma alternativa, o cliente salva a resposta imediatamente no endpoint `/answer`. A chave sessão/pergunta faz com que uma nova escolha atualize a anterior. Cada gravação verifica o token, valida pergunta/opção no snapshot da sessão e bloqueia a linha enquanto grava, impedindo corrida com a conclusão. Se a gravação falhar, a resposta local é mantida e avançar tenta salvá-la novamente. Na conclusão, a mesma transação valida o conjunto completo, consolida as respostas/resultados e marca conclusão; respostas já salvas são atualizadas sem duplicação. Sessões incompletas não geram resultado individual.
 
 O máximo de cada eixo vem somente das questões apresentadas. Eixos ausentes são omitidos. O desafio não recebe percentual global. Empates aparecem sem escolher arbitrariamente uma competência.
 
@@ -189,9 +190,9 @@ O máximo de cada eixo vem somente das questões apresentadas. Eixos ausentes s�
 
 ## Dashboard e privacidade
 
-Prisma utiliza count e groupBy para contagens, médias dos percentuais individuais, médias/distribuições por competência, desempenho por questão e distribuição por área. Nenhum conjunto de respostas brutas é enviado. Pesquisa incompleta e desafio ficam fora das métricas.
+Prisma utiliza count e groupBy para contagens, médias dos percentuais individuais, médias/distribuições por competência, desempenho por questão e distribuição por área. Nenhum conjunto de respostas brutas é enviado. Médias gerais e por competência consideram apenas pesquisa concluída. As métricas por pergunta incluem respostas salvas de participações incompletas, mas cada pergunta só aparece ao atingir o mínimo de amostra e não gera resultado individual.
 
-Filtros começam em “Todos”, podem ser combinados e atualizam as métricas. Comparação com amostra geral usa percentuais normalizados. Questões aparecem do menor para o maior percentual médio, com n e distribuição dos scores quando permitida.
+Filtros começam em “Todos”, podem ser combinados e atualizam as métricas. Comparação com amostra geral usa percentuais normalizados. Questões aparecem do menor para o maior percentual médio, com n e distribuição dos scores quando permitida. Se ainda não houver amostra suficiente de sessões concluídas, o painel pode mostrar somente perguntas que já atingiram o mínimo de respostas.
 
 `MIN_AGGREGATE_SAMPLE_SIZE = 5`: segmentos menores e complementos pequenos são suprimidos, inclusive na comparação com todos os subconjuntos dos filtros ativos; a resposta não expõe sua contagem exata. Questões/eixos exigem n mínimo. Distribuições que contêm células não vazias abaixo do limite são inteiramente suprimidas para impedir inferência direta por subtração. Comparações por questão/eixo e distribuições também suprimem complementos pequenos. Consultas usam uma transação RepeatableRead. Uma única consulta `$queryRaw` parametrizada calcula médias de respostas divididas pelo máximo do snapshot e agrega o título JSON; o restante usa operações Prisma. Esses controles reduzem a reconstrução por diferenças entre filtros. Não constituem privacidade diferencial nem garantia contra todas as consultas sobrepostas ou mudanças da amostra ao longo do tempo; não há histórico/budget de consultas por pessoa, já que não se exige login.
 

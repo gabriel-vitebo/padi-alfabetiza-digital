@@ -8,13 +8,13 @@
 
 O sistema utilizará um banco único de questões. Cada questão possui um campo `contexts` indicando onde pode ser utilizada:
 
-- `diagnostico`: aplicação disponibilizada previamente aos estudantes;
+- `diagnostico`: pesquisa principal, com 10 questões;
 - `feira`: aplicação rápida durante a feira;
 - uma questão pode pertencer aos dois contextos.
 
 A quantidade será recebida pela aplicação, por exemplo:
 
-- `/perguntas?total=14&contexto=diagnostico`
+- `/perguntas?total=10&contexto=diagnostico`
 - `/perguntas?total=5&contexto=feira`
 
 ### Regra de sorteio
@@ -26,7 +26,7 @@ A quantidade será recebida pela aplicação, por exemplo:
 5. Quando `total < 7`, é matematicamente impossível apresentar todos os eixos em uma única sessão. Nesse caso, sortear eixos distintos até atingir `total`, sem repetir eixo enquanto houver eixos ainda não utilizados.
 6. A ordem final das questões também deve ser embaralhada.
 7. O parâmetro `total` nunca pode exceder a quantidade de questões disponíveis para o contexto.
-8. Para análise acadêmica principal, recomenda-se `total >= 14`, pois 10 questões não permitem representar igualmente os sete eixos. Para a feira, 3–5 questões funcionam como experiência demonstrativa, não como diagnóstico completo.
+8. A pesquisa principal apresenta 10 questões, garantindo ao menos uma por eixo e duas perguntas introdutórias sobre hábitos de pesquisa e uso da internet para estudar. Como o sorteio é balanceado, três eixos recebem uma questão adicional por participação. Para a feira, 3–5 questões funcionam como experiência demonstrativa, não como diagnóstico completo.
 
 ## 2. Pontuação
 
@@ -46,19 +46,19 @@ As justificativas abaixo são material interno para documentação e revisão do
 
 Competência do artigo: operar dispositivos, aplicativos e ambientes digitais de acordo com diferentes finalidades, demonstrando autonomia e capacidade de selecionar recursos adequados.
 
-## Q01 — Formato incompatível
+## Q01 — Pesquisa para estudar
 
 **Contextos:** diagnostico, feira
 
-Você precisa enviar um trabalho pela plataforma da faculdade, mas o arquivo está em um formato que a plataforma não aceita. O que você faria primeiro?
+Você usa a internet para estudar e precisa encontrar uma explicação para uma atividade escolar. O que faria primeiro?
 
-- **A — 2 pontos:** Verificaria quais formatos são aceitos e procuraria uma forma adequada de converter ou exportar o arquivo.
-- **B — 1 ponto:** Pediria para um colega converter o arquivo para mim, sem tentar entender como fazer.
-- **C — 0 pontos:** Renomearia manualmente a extensão do arquivo esperando que ele passe a funcionar.
-- **D — 0 pontos:** Desistiria do envio e aguardaria o professor perguntar o que aconteceu.
+- **A — 2 pontos:** Pesquisaria o assunto usando palavras relacionadas à dúvida e abriria um resultado que pareça útil.
+- **B — 1 ponto:** Perguntaria em um grupo de mensagens e também tentaria pesquisar o assunto.
+- **C — 0 pontos:** Usaria apenas a primeira frase que aparecer, sem abrir o resultado.
+- **D — 0 pontos:** Desistiria porque não sei qual palavra usar na busca.
 
 **Resposta mais adequada:** A  
-**Justificativa:** demonstra compreensão da finalidade, investigação do ambiente e seleção autônoma de uma solução, em vez de apenas depender de terceiros ou alterar o arquivo sem compreender o formato.
+**Justificativa:** observa uma estratégia inicial de busca para estudo em uma situação cotidiana, sem exigir conhecimento de uma plataforma ou ferramenta específica.
 
 ## Q02 — Escolha da ferramenta
 
@@ -108,19 +108,19 @@ Você está trabalhando em um arquivo importante que precisará acessar em outro
 
 Competência do artigo: pesquisar, comparar, interpretar e avaliar informações, identificando elementos que contribuam para avaliar a confiabilidade de uma fonte.
 
-## Q05 — Informação em rede social
+## Q05 — Fontes confiáveis
 
 **Contextos:** diagnostico, feira
 
-Você encontra em uma rede social uma informação surpreendente que pretende utilizar em um trabalho acadêmico, mas a publicação não mostra de onde os dados vieram. O que faria?
+Quando você pesquisa algo para um trabalho, como costuma decidir se uma informação é confiável?
 
-- **A — 2 pontos:** Procuraria a origem da informação e compararia com outras fontes confiáveis antes de utilizá-la.
-- **B — 1 ponto:** Utilizaria se a publicação fosse de um perfil conhecido e tivesse muitos comentários positivos.
-- **C — 0 pontos:** Utilizaria porque muitas pessoas compartilharam a publicação.
-- **D — 0 pontos:** Consideraria verdadeira se o texto estivesse bem escrito e apresentasse números.
+- **A — 2 pontos:** Confiro quem publicou e comparo com outra fonte confiável.
+- **B — 1 ponto:** Vejo se a informação aparece em mais de um lugar.
+- **C — 0 pontos:** Confio quando aparece entre os primeiros resultados da busca.
+- **D — 0 pontos:** Confio quando muitas pessoas compartilharam ou curtiram.
 
 **Resposta mais adequada:** A  
-**Justificativa:** compartilhamentos, aparência e popularidade não substituem autoria, evidência e comparação entre fontes.
+**Justificativa:** apresenta critérios simples que ajudam a avaliar uma informação, como identificar quem publicou e comparar com outra fonte.
 
 ## Q06 — Resultados diferentes
 
@@ -496,8 +496,8 @@ Cada eixo possui exatamente quatro questões para evitar que o próprio banco fa
 
 As questões marcadas como `feira` foram escolhidas por serem mais rápidas de compreender e responder:
 
-- Q01 — Formato incompatível
-- Q05 — Informação em rede social
+- Q01 — Pesquisa para estudar
+- Q05 — Fontes confiáveis
 - Q07 — Manchete alarmante
 - Q09 — Discordância no grupo
 - Q15 — Imagem encontrada na internet

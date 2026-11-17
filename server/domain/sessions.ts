@@ -26,7 +26,8 @@ export async function startSession(db: Database, mode: SurveyMode, profile?: Pro
   await assertDatabaseEnvironment(db)
   return db.$transaction(async tx => {
     const rule = surveyRules[mode]
-    const questions = selectQuestions({ questions: await loadBank(tx), total: rule.questionCount, context: rule.context })
+    const questions = selectQuestions({ questions: await loadBank(tx), total: rule.questionCount, context: rule.context,
+      requiredQuestionIds: mode === 'research' ? ['Q01', 'Q05'] : [] })
     const id = randomUUID()
     const { accessToken, accessTokenHash } = createSessionAccess()
     await tx.surveySession.create({ data: { id, mode, accessTokenHash, questionCount: questions.length, synthetic } })
@@ -39,7 +40,7 @@ export async function startSession(db: Database, mode: SurveyMode, profile?: Pro
         sessionId: id, questionId: question.id, optionId: o.id, label: o.label, score: o.score
       })) })
     }
-    return { sessionId: id, accessToken, mode, completed: false, questions: questions.map(publicQuestion) }
+    return { sessionId: id, accessToken, mode, completed: false, questions: questions.map(publicQuestion), answers: [] }
   })
 }
 async function sessionRow(db: Database | Transaction, id: string, accessToken: string | undefined) {
@@ -55,7 +56,29 @@ async function snapshots(db: Database | Transaction, id: string) {
 export async function getSession(db: Database, id: string, accessToken: string | undefined): Promise<Session> {
   await assertDatabaseEnvironment(db)
   const row = await sessionRow(db, id, accessToken)
-  return { sessionId: id, mode: row.mode, completed: row.status === 'COMPLETED', questions: (await snapshots(db, id)).map(publicQuestion) }
+  const [questions, answers] = await Promise.all([
+    snapshots(db, id),
+    db.surveyAnswer.findMany({ where: { sessionId: id }, select: { questionId: true, optionId: true } })
+  ])
+  return { sessionId: id, mode: row.mode, completed: row.status === 'COMPLETED', questions: questions.map(publicQuestion), answers }
+}
+export async function saveAnswer(db: Database, id: string, input: { questionId: string; optionId: string }, accessToken: string | undefined): Promise<void> {
+  await assertDatabaseEnvironment(db)
+  await db.$transaction(async tx => {
+    const row = await sessionRow(tx, id, accessToken)
+    // Lock the session row so saving an answer cannot race with final submission.
+    const claim = await tx.surveySession.updateMany({ where: { id, status: 'IN_PROGRESS' }, data: { updatedAt: new Date() } })
+    if (!claim.count || row.status !== 'IN_PROGRESS') throw new SurveyError(409, 'Esta sessão já foi concluída.')
+    const question = (await snapshots(tx, id)).find(q => q.id === input.questionId)
+    if (!question) throw new SurveyError(400, 'Questão não pertence a esta sessão.')
+    const option = question.options.find(o => o.id === input.optionId)
+    if (!option) throw new SurveyError(400, 'Alternativa inválida para esta questão.')
+    await tx.surveyAnswer.upsert({
+      where: { sessionId_questionId: { sessionId: id, questionId: question.id } },
+      create: { sessionId: id, questionId: question.id, optionId: option.id, score: option.score },
+      update: { optionId: option.id, score: option.score }
+    })
+  })
 }
 export async function submitSession(db: Database, id: string, input: { questionId: string; optionId: string }[], accessToken: string | undefined): Promise<SurveyResult> {
   await assertDatabaseEnvironment(db)
@@ -68,10 +91,14 @@ export async function submitSession(db: Database, id: string, input: { questionI
     const questions = await snapshots(tx, id)
     const answers = validateAnswers(questions, input, row.status === 'COMPLETED')
     const result = calculateDiagnosticResult(questions, answers)
-    await tx.surveyAnswer.createMany({ data: questions.map(q => {
+    await Promise.all(questions.map(q => {
       const o = q.options.find(o => o.id === answers[q.id])!
-      return { sessionId: id, questionId: q.id, optionId: o.id, score: o.score }
-    }) })
+      return tx.surveyAnswer.upsert({
+        where: { sessionId_questionId: { sessionId: id, questionId: q.id } },
+        create: { sessionId: id, questionId: q.id, optionId: o.id, score: o.score },
+        update: { optionId: o.id, score: o.score }
+      })
+    }))
     await tx.competencyResult.createMany({ data: result.competencies.map(c => ({
       sessionId: id, competencyId: c.competency, earnedScore: c.earnedScore, maxScore: c.maxScore
     })) })

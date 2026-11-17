@@ -1,5 +1,5 @@
 export const surveyRules = {
-  research: { questionCount: 14, context: 'diagnostico' },
+  research: { questionCount: 10, context: 'diagnostico' },
   fair: { questionCount: 5, context: 'feira' }
 } as const
 export const MIN_AGGREGATE_SAMPLE_SIZE = 5

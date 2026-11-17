@@ -15,7 +15,7 @@ useHead({title:'Dashboard da pesquisa · PADI'})
     <header class="space-y-3">
       <p class="text-sm font-semibold uppercase tracking-widest text-teal-300">Pesquisa acadêmica</p>
       <h1 class="text-3xl font-semibold text-white sm:text-4xl">Retrato das participações</h1>
-      <p class="max-w-3xl leading-7 text-slate-300">Somente pesquisas concluídas. Resultados descritivos, sem inferência causal. O Desafio Digital não compõe esta amostra.</p>
+      <p class="max-w-3xl leading-7 text-slate-300">Médias e resultados individuais consideram apenas pesquisas concluídas. As respostas por pergunta incluem participações incompletas. O Desafio Digital não compõe esta amostra.</p>
     </header>
     <form class="grid gap-4 rounded-2xl border border-slate-800 bg-slate-900 p-5 sm:grid-cols-2" @submit.prevent>
       <div v-for="(_value, key) in filters" :key="key" class="space-y-2">
@@ -29,8 +29,20 @@ useHead({title:'Dashboard da pesquisa · PADI'})
     <UButton variant="outline" color="neutral" :loading="status === 'pending'" @click="refresh()">Atualizar resultados</UButton>
     <p v-if="status === 'pending'" role="status">Carregando resultados agregados…</p>
     <div v-else-if="error" role="alert" class="rounded-xl border border-rose-700 p-5">Não foi possível consultar os resultados. O serviço pode estar temporariamente indisponível. Tente atualizar em instantes.</div>
-    <p v-else-if="data?.status === 'empty'" role="status" class="rounded-xl border border-slate-700 p-6">A pesquisa ainda não tem participações concluídas.</p>
-    <p v-else-if="data?.status === 'insufficient'" role="status" class="rounded-xl border border-amber-700 p-6">Amostra insuficiente para detalhamento. São necessários ao menos {{ data.minimum }} participantes no segmento e proteção dos grupos complementares. Amplie os filtros.</p>
+    <p v-else-if="data?.status === 'empty'" role="status" class="rounded-xl border border-slate-700 p-6">A pesquisa ainda não tem respostas registradas.</p>
+    <div v-else-if="data?.status === 'insufficient'" class="space-y-5">
+      <p role="status" class="rounded-xl border border-amber-700 p-6">Amostra insuficiente para médias gerais. São necessários ao menos {{ data.minimum }} pesquisas concluídas no segmento e proteção dos grupos complementares. <span v-if="data.hasPartialParticipants">Há respostas de participações incompletas; contagens por pergunta são exibidas quando atingem o mínimo de segurança.</span></p>
+      <section v-if="data.questionResponses.length" class="space-y-4">
+        <h2 class="text-xl font-semibold">Respostas agregadas por pergunta</h2>
+        <p class="text-sm text-slate-400">Cada pergunta só aparece após atingir {{ data.minimum }} respostas. As respostas incluem pesquisas concluídas e incompletas; não geram resultado individual.</p>
+        <div class="overflow-x-auto rounded-xl border border-slate-800">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-slate-900"><tr><th scope="col" class="p-4">Questão</th><th scope="col" class="p-4">Respostas</th><th scope="col" class="p-4">Média</th><th scope="col" class="p-4">Distribuição</th></tr></thead>
+            <tbody><tr v-for="q in data.questionResponses" :key="q.id" class="border-t border-slate-800"><th scope="row" class="p-4 font-medium">{{ q.id }} — {{ q.title }}</th><td class="p-4">{{ q.count }}</td><td class="p-4 text-teal-200">{{ q.average.toFixed(1) }}%</td><td class="p-4"><div v-if="q.distribution" class="flex flex-wrap gap-3"><span v-for="bin in q.distribution" :key="bin.value">{{ bin.value }} pontos: {{ bin.percentage.toFixed(1) }}%</span></div><span v-else class="text-slate-400">Distribuição protegida</span></td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
     <template v-else-if="segment">
       <p v-if="segment.syntheticCount" role="status" class="rounded-xl border border-amber-600 p-4 text-amber-200">Amostra de desenvolvimento: contém dados fictícios. Não usar como evidência da pesquisa.</p>
       <div class="grid gap-4 sm:grid-cols-3">
@@ -62,7 +74,7 @@ useHead({title:'Dashboard da pesquisa · PADI'})
       </section>
       <section class="space-y-5">
         <h2 class="text-2xl font-semibold">Questões com maior oportunidade de desenvolvimento</h2>
-        <p class="text-sm text-slate-400">Ordenadas do menor ao maior percentual médio. Questões com poucas respostas são omitidas.</p>
+        <p class="text-sm text-slate-400">Ordenadas do menor ao maior percentual médio. As respostas incluem participações incompletas; médias gerais e por competência usam apenas pesquisas concluídas. Questões com menos de {{ data?.minimum }} respostas são omitidas.</p>
         <div class="overflow-x-auto rounded-xl border border-slate-800">
           <table class="w-full text-left text-sm">
             <caption class="sr-only">Desempenho por questão e distribuição dos pontos</caption>

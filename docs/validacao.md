@@ -41,7 +41,7 @@ Fonte de verdade Q01–Q28/enunciados/opções/scores/contextos; seleção balan
 
 ## Integração em PostgreSQL Docker
 
-- Dashboard vazio e sessão real com 14 questões/snapshots.
+- Dashboard vazio e sessão real com 10 questões/snapshots.
 - Retomada idêntica, sem novo sorteio.
 - Token ausente/incorreto negado; somente hash de 64 caracteres persistido.
 - FKs rejeitam alternativa externa; PK rejeita resposta duplicada; transação com duplicação reverte todas as respostas.
@@ -64,7 +64,7 @@ Foi corrigida uma falha real do seed: `prisma db seed` chamado diretamente por N
 
 Playwright usa o build real (`.output/server/index.mjs`) na porta local 3107 e PostgreSQL Docker. As APIs não foram mockadas. Chrome já instalado foi utilizado com `PLAYWRIGHT_CHANNEL=chrome`.
 
-Cenários: pesquisa mobile com 14 perguntas apesar de `?total=1`, retomada e foco após reload, payload sem scores, token exigido, conclusão/resultado persistente, acesso negado em outro navegador, nova participação ao voltar espontaneamente, sem botão de refazer; desafio com cinco perguntas e resultado limitado; dashboard com canvas/tabela/filtros/amostra insuficiente; validação HTTP de entradas inválidas; tratamento dos marcadores legados.
+Cenários: pesquisa mobile com 10 perguntas apesar de `?total=1`, Q01/Q05 presentes, retomada e foco após reload, payload sem scores, token exigido, conclusão/resultado persistente, acesso negado em outro navegador, nova participação ao voltar espontaneamente, sem botão de refazer; desafio com cinco perguntas e resultado limitado; dashboard com canvas/tabela/filtros/amostra insuficiente; validação HTTP de entradas inválidas; tratamento dos marcadores legados.
 
 ## Limitações externas
 

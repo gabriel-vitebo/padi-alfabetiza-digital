@@ -7,6 +7,7 @@ type SelectQuestionsInput = {
   questions: Question[]
   total: number
   context: QuestionContext
+  requiredQuestionIds?: string[]
   random?: Random
 }
 
@@ -28,10 +29,12 @@ const shuffle = <T>(items: T[], random: Random): T[] => {
   return shuffled
 }
 
-export const selectQuestions = ({ questions, total, context, random = Math.random }: SelectQuestionsInput): Question[] => {
+export const selectQuestions = ({ questions, total, context, requiredQuestionIds = [], random = Math.random }: SelectQuestionsInput): Question[] => {
   const eligible = questions.filter(question => question.contexts.includes(context))
   if (!Number.isInteger(total) || total < 1 || total > eligible.length) throw new Error('Quantidade de questões indisponível')
   if (new Set(eligible.map(q => q.id)).size !== eligible.length) throw new Error('Questões duplicadas')
+  if (new Set(requiredQuestionIds).size !== requiredQuestionIds.length || requiredQuestionIds.length > total
+    || requiredQuestionIds.some(id => !eligible.some(q => q.id === id))) throw new Error('Questões obrigatórias indisponíveis')
   if (total >= competencyIds.length && competencyIds.some(id => !eligible.some(q => q.competency === id))) throw new Error('Banco sem todos os eixos')
   const target = total
 
@@ -52,10 +55,19 @@ export const selectQuestions = ({ questions, total, context, random = Math.rando
     return true
   }
 
+  for (const id of requiredQuestionIds) {
+    const question = eligible.find(q => q.id === id)!
+    selected.push(question)
+    const pool = byCompetency.get(question.competency)!
+    pool.splice(pool.findIndex(q => q.id === id), 1)
+    counts.set(question.competency, (counts.get(question.competency) ?? 0) + 1)
+  }
+
+  const represented = new Set(selected.map(q => q.competency))
   if (target >= availableCompetencies.length) {
-    for (const competency of shuffle(availableCompetencies, random)) addFrom(competency)
+    for (const competency of shuffle(availableCompetencies.filter(id => !represented.has(id)), random)) addFrom(competency)
   } else {
-    for (const competency of shuffle(availableCompetencies, random).slice(0, target)) addFrom(competency)
+    for (const competency of shuffle(availableCompetencies.filter(id => !represented.has(id)), random).slice(0, target - selected.length)) addFrom(competency)
   }
 
   while (selected.length < target) {

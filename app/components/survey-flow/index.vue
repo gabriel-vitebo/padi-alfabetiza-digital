@@ -27,7 +27,7 @@ const research = props.mode === 'research'
           <UButton size="lg" :disabled="!hasCurrentAnswer || submitting" :loading="submitting" @click="isLastQuestion ? finish() : next()">{{ isLastQuestion ? 'Concluir e ver resultado' : 'Continuar' }}</UButton>
         </div>
       </fieldset>
-      <p class="text-sm text-slate-400">Você pode voltar às questões anteriores. As respostas só são enviadas ao concluir.</p>
+      <p role="status" class="text-sm text-slate-400">{{ submitting ? 'Salvando sua resposta…' : 'Sua resposta é salva ao selecioná-la. Você pode voltar e alterá-la antes de concluir.' }}</p>
     </div>
     <form v-else-if="!error" class="space-y-7" @submit.prevent="start(research ? profile : undefined)">
       <h1 class="text-3xl font-semibold text-white sm:text-4xl">{{ research ? 'Como você lida com situações digitais?' : 'Experimente suas escolhas digitais' }}</h1>
@@ -43,7 +43,7 @@ const research = props.mode === 'research'
         </div>
       </div>
       <p v-if="research" id="profile-purpose" class="text-sm leading-6 text-slate-400">Escolha a área que mais combina com seus estudos ou trabalho. Usamos essa informação apenas para comparar os resultados entre áreas; ela não altera sua pontuação. Se preferir, selecione “Prefiro não informar”.</p>
-      <p class="text-sm leading-6 text-slate-400">Participação voluntária. Os dados serão usados de forma agregada neste trabalho acadêmico. O instrumento não é psicometricamente validado e os resultados são descritivos. Você pode sair antes de concluir.</p>
+      <p class="text-sm leading-6 text-slate-400">Participação voluntária. As respostas são salvas conforme você avança; se sair antes de concluir, elas entram apenas nas contagens agregadas por pergunta, sem gerar resultado individual. O instrumento não é psicometricamente validado. Os dados são usados de forma agregada neste trabalho acadêmico.</p>
       <UButton type="submit" size="xl" :loading="loading">{{ research ? 'Começar pesquisa' : 'Começar desafio' }}</UButton>
     </form>
   </section>

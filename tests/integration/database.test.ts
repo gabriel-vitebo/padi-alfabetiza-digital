@@ -2,7 +2,7 @@ import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { createDatabase } from '../../server/db/client'
 import { getEnvironment } from '../../server/domain/environment'
-import { startSession, submitSession, getSession, getResult } from '../../server/domain/sessions'
+import { startSession, submitSession, getSession, getResult, saveAnswer } from '../../server/domain/sessions'
 import { dashboardSummary } from '../../server/domain/dashboard'
 if (getEnvironment() !== 'local' || !new URL(process.env.DATABASE_URL!).pathname.endsWith('_test')) throw new Error('Testes exigem APP_ENV=local e banco com sufixo _test')
 const sql=createDatabase()
@@ -16,8 +16,8 @@ after(async()=>{ if(ids.length) await sql.$transaction(async tx=>{
 test('atomic persistence, concurrent completion, immutable snapshot and dashboard privacy', async()=>{
   assert.equal((await dashboardSummary(sql,{})).status,'empty')
   const session=await startSession(sql,'research',profile);ids.push(session.sessionId)
-  assert.equal(session.questions.length,14)
-  assert.deepEqual(await getSession(sql,session.sessionId,session.accessToken), {sessionId:session.sessionId,mode:session.mode,completed:false,questions:session.questions})
+  assert.equal(session.questions.length,10)
+  assert.deepEqual(await getSession(sql,session.sessionId,session.accessToken), {sessionId:session.sessionId,mode:session.mode,completed:false,questions:session.questions,answers:[]})
   await assert.rejects(getSession(sql,session.sessionId,undefined), {statusCode:403})
   await assert.rejects(getResult(sql,session.sessionId,'x'.repeat(43)), {statusCode:403})
   const stored = await sql.surveySession.findUniqueOrThrow({where:{id:session.sessionId}})
@@ -25,6 +25,16 @@ test('atomic persistence, concurrent completion, immutable snapshot and dashboar
   assert.equal(stored.accessTokenHash?.length,64)
   const answers=session.questions.map(q=>({questionId:q.id,optionId:'A'}))
   await assert.rejects(submitSession(sql,session.sessionId,answers,undefined), {statusCode:403})
+  const firstAnswer=answers[0]!
+  await assert.rejects(saveAnswer(sql,session.sessionId,firstAnswer,undefined), {statusCode:403})
+  await saveAnswer(sql,session.sessionId,firstAnswer,session.accessToken)
+  await saveAnswer(sql,session.sessionId,{...firstAnswer,optionId:'B'},session.accessToken)
+  assert.deepEqual((await getSession(sql,session.sessionId,session.accessToken)).answers,[{questionId:firstAnswer.questionId,optionId:'B'}])
+  await assert.rejects(getResult(sql,session.sessionId,session.accessToken), {statusCode:409})
+  const partialDashboard=await dashboardSummary(sql,{})
+  assert.equal(partialDashboard.hasPartialParticipants,true)
+  assert.equal(partialDashboard.questionResponses.length,0) // A single response stays suppressed.
+  await assert.rejects(saveAnswer(sql,session.sessionId,{questionId:'OUTSIDE',optionId:'A'},session.accessToken), {statusCode:400})
   assert.ok(!JSON.stringify(session).includes('score'))
   const questionId=session.questions[0]!.id
   // Database protection remains effective even when API validation is bypassed.
@@ -46,10 +56,12 @@ test('atomic persistence, concurrent completion, immutable snapshot and dashboar
     [{questionId,optionId:'FOREIGN'},...answers.slice(1)],
     [answers[1]!,...answers.slice(1)]
   ]) await assert.rejects(submitSession(sql,session.sessionId,invalid,session.accessToken), {statusCode:400})
-  const zero=await sql.surveyAnswer.count({where:{sessionId:session.sessionId}});assert.equal(zero,0)
+  const zero=await sql.surveyAnswer.count({where:{sessionId:session.sessionId}});assert.equal(zero,1)
   const settled=await Promise.allSettled([submitSession(sql,session.sessionId,answers,session.accessToken),submitSession(sql,session.sessionId,answers,session.accessToken)])
   assert.equal(settled.filter(r=>r.status==='fulfilled').length,1, JSON.stringify(settled.map(r=>r.status==='rejected'?String(r.reason):'ok')))
   const result=await getResult(sql,session.sessionId,session.accessToken)
+  assert.equal(await sql.surveyAnswer.count({where:{sessionId:session.sessionId}}),10)
+  assert.equal((await sql.surveyAnswer.findUniqueOrThrow({where:{sessionId_questionId:{sessionId:session.sessionId,questionId:firstAnswer.questionId}}})).optionId,'A')
   await assert.rejects(submitSession(sql,session.sessionId,answers,session.accessToken), {statusCode:409})
   assert.equal(result.overallPercentage,100);assert.equal(result.competencies.length,7)
   assert.equal((await dashboardSummary(sql,{})).status,'insufficient')
@@ -67,8 +79,16 @@ test('atomic persistence, concurrent completion, immutable snapshot and dashboar
     const s=await startSession(sql,'research',{area:i<4?'tecnologia':'outra'});ids.push(s.sessionId)
     await submitSession(sql,s.sessionId,s.questions.map(q=>({questionId:q.id,optionId:i<4?'A':'B'})),s.accessToken)
   }
+  for(let i=0;i<4;i++) {
+    const partial=await startSession(sql,'research',{area:'outra'});ids.push(partial.sessionId)
+    const introductory=partial.questions.find(q=>q.id==='Q01')!
+    await saveAnswer(sql,partial.sessionId,{questionId:introductory.id,optionId:i%2===0?'A':'B'},partial.accessToken)
+  }
   const all=await dashboardSummary(sql,{})
   assert.equal(all.status,'ready');assert.equal(all.segment?.count,10);assert.equal(all.segment?.average,75)
+  assert.equal(all.hasPartialParticipants,true)
+  assert.equal(all.segment?.questions.find(q=>q.id==='Q01')?.count,14)
+  assert.equal(all.segment?.questions.find(q=>q.id==='Q01')?.distribution,null) // The small B cell remains hidden.
   const filtered=await dashboardSummary(sql,{area:'tecnologia'})
   assert.equal(filtered.segment?.count,5);assert.equal(filtered.segment?.average,100);assert.equal(filtered.overall?.average,75)
   assert.equal((await dashboardSummary(sql,{area:'sem-area'})).status,'insufficient')

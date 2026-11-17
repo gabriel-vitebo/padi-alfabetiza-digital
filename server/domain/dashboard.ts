@@ -18,7 +18,29 @@ function where(filters: Filters): Prisma.SurveySessionWhereInput {
 async function sampleCount(db: Transaction, filters: Filters) {
   return db.surveySession.count({ where: where(filters) })
 }
-async function aggregate(db: Transaction, filters: Filters): Promise<Aggregate> {
+async function partialParticipantCount(db: Transaction, filters: Filters) {
+  return db.surveySession.count({ where: { mode: 'research', status: 'IN_PROGRESS',
+    questions: { some: { options: { some: { answers: { some: {} } } } } }, profile: { is: filters } } })
+}
+async function questionAggregates(db: Transaction, filters: Filters): Promise<Aggregate['questions']> {
+  const rows = await db.$queryRaw<{ id: string; title: string; count: number; average: number }[]>(Prisma.sql`
+    select a.question_id as id,min(sq.snapshot->>'title') as title,
+      count(*) filter (where (${filters.area ?? null}::text is null or p.area=${filters.area ?? null}))::int as count,
+      avg(100.0*a.score/sq.max_score) filter (where (${filters.area ?? null}::text is null or p.area=${filters.area ?? null}))::float8 as average
+    from padi.answers a join padi.sessions s on s.id=a.session_id
+    join padi.profiles p on p.session_id=s.id
+    join padi.session_questions sq on sq.session_id=a.session_id and sq.question_id=a.question_id
+    where s.mode='research'
+    group by a.question_id
+    having count(*) filter (where (${filters.area ?? null}::text is null or p.area=${filters.area ?? null})) >= ${minimum}
+      and (${filters.area ?? null}::text is null or count(*) filter (where p.area is distinct from ${filters.area ?? null}) = 0
+        or count(*) filter (where p.area is distinct from ${filters.area ?? null}) >= ${minimum})
+    order by average,a.question_id`)
+  const scores = await db.surveyAnswer.groupBy({ by: ['questionId', 'score'],
+    where: { option: { question: { session: { mode: 'research', profile: { is: filters } } } } }, _count: true, orderBy: { score: 'desc' } })
+  return rows.map(q => ({ ...q, distribution: protectDistribution(scores.filter(s => s.questionId === q.id).map(s => ({value: String(s.score), count: s._count}))) }))
+}
+async function aggregate(db: Transaction, filters: Filters, questions: Aggregate['questions']): Promise<Aggregate> {
   const selected = where(filters)
   const metrics = await db.surveySession.groupBy({ by: ['earnedScore', 'maxScore', 'synthetic'], where: selected, _count: true })
   const count = metrics.reduce((n, r) => n + r._count, 0)
@@ -40,26 +62,13 @@ async function aggregate(db: Transaction, filters: Filters): Promise<Aggregate> 
       average: rows.reduce((sum, r) => sum + 100 * r.earnedScore / r.maxScore * r._count, 0) / n,
       distribution: protectDistribution([...bins].sort().map(([value,count]) => ({value,count}))) })
   }
-  // One targeted SQL aggregation: Prisma groupBy cannot average an answer divided
-  // by a related snapshot's maximum, nor aggregate its JSON title. Values are bound.
-  const questions = await db.$queryRaw<{ id: string; title: string; count: number; average: number }[]>(Prisma.sql`
-    select a.question_id as id,min(sq.snapshot->>'title') as title,count(*)::int as count,
-      avg(100.0*a.score/sq.max_score)::float8 as average
-    from padi.answers a join padi.sessions s on s.id=a.session_id
-    join padi.profiles p on p.session_id=s.id
-    join padi.session_questions sq on sq.session_id=a.session_id and sq.question_id=a.question_id
-    where s.mode='research' and s.status='COMPLETED'
-      and (${filters.area ?? null}::text is null or p.area=${filters.area ?? null})
-    group by a.question_id having count(*) >= ${minimum} order by average,a.question_id`)
-  const scores = await db.surveyAnswer.groupBy({ by: ['questionId', 'score'],
-    where: { option: { question: { session: selected } } }, _count: true, orderBy: { score: 'desc' } })
   const demographics: Aggregate['demographics'] = {}
   for (const key of ['area'] as const) {
     const rows = await db.participantProfile.groupBy({ by: [key], where: { session: selected }, _count: true })
     demographics[key] = protectDistribution(rows.map(r => ({ value: r[key] ?? '__legacy__', count: r._count })).sort((a,b) => b.count - a.count))
   }
   return { count, average, syntheticCount, competencies,
-    questions: questions.map(q => ({ ...q, distribution: protectDistribution(scores.filter(s => s.questionId === q.id).map(s => ({value: String(s.score), count: s._count}))) })), demographics }
+    questions, demographics }
 }
 export async function dashboardSummary(sql: Database, filters: Filters): Promise<DashboardSummary> {
   await assertDatabaseEnvironment(sql)
@@ -67,14 +76,18 @@ export async function dashboardSummary(sql: Database, filters: Filters): Promise
   return sql.$transaction(async tx => {
     const overallCount = await sampleCount(tx,{})
     const segmentCount = await sampleCount(tx,filters)
+    const [partialParticipants, questionResponses] = await Promise.all([
+      partialParticipantCount(tx, filters), questionAggregates(tx, filters)
+    ])
     const ancestors = await Promise.all(filterAncestors(filters).map(parent => sampleCount(tx,parent)))
     const smallComplement = ancestors.some(count => isSmallRemainder(count,segmentCount))
-    if (overallCount === 0) return { status: 'empty', minimum, segment: null, overall: null }
+    if (overallCount === 0 && partialParticipants === 0 && questionResponses.length === 0)
+      return { status: 'empty', minimum, segment: null, overall: null, hasPartialParticipants: false, questionResponses: [] }
     if (segmentCount < minimum || smallComplement)
-      return { status: 'insufficient', minimum, segment: null, overall: null }
-    const segment = await aggregate(tx,filters)
-    const overall = Object.keys(filters).length ? await aggregate(tx,{}) : segment
+      return { status: 'insufficient', minimum, segment: null, overall: null, hasPartialParticipants: partialParticipants > 0, questionResponses }
+    const segment = await aggregate(tx,filters,questionResponses)
+    const overall = Object.keys(filters).length ? await aggregate(tx,{},await questionAggregates(tx,{})) : segment
     if (overall !== segment) protectComparison(segment,overall)
-    return { status: 'ready', minimum, segment, overall }
+    return { status: 'ready', minimum, segment, overall, hasPartialParticipants: partialParticipants > 0, questionResponses }
   }, { isolationLevel: 'RepeatableRead' }) as Promise<DashboardSummary>
 }

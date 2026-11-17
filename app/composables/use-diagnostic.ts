@@ -7,6 +7,7 @@ export const useDiagnostic = (mode: SurveyMode) => {
   const session = ref<Session | null>(null)
   const saved = ref<SavedSession | null>(null)
   const answers = ref<Record<string,string>>({})
+  const persistedAnswers = ref<Record<string,string>>({})
   const currentIndex = ref(0)
   const loading = ref(true)
   const submitting = ref(false)
@@ -52,9 +53,12 @@ export const useDiagnostic = (mode: SurveyMode) => {
       if (loaded.mode !== mode) throw new Error('invalid-mode')
       if (loaded.completed) return
       session.value = loaded
+      persistedAnswers.value = Object.fromEntries(loaded.answers.map(a => [a.questionId, a.optionId]))
       answers.value = Object.fromEntries(loaded.questions.flatMap(q => {
         const id = value.answers?.[q.id]
-        return q.options.some(o => o.id === id) ? [[q.id,id!]] : []
+        const serverId = persistedAnswers.value[q.id]
+        const selected = q.options.some(o => o.id === id) ? id : serverId
+        return selected && q.options.some(o => o.id === selected) ? [[q.id,selected]] : []
       }))
       currentIndex.value = Math.max(0, loaded.questions.findIndex(q => !answers.value[q.id]))
       persist(loaded.completed)
@@ -66,17 +70,43 @@ export const useDiagnostic = (mode: SurveyMode) => {
     try {
       const started = await $fetch<StartedSession>(`/api/surveys/${mode}/start`, { method: 'POST', body: profile ? { profile } : {} })
       access.remember(started.sessionId, started.accessToken)
-      session.value = { sessionId: started.sessionId, mode: started.mode, completed: started.completed, questions: started.questions }
-      answers.value = {}; currentIndex.value = 0; persist()
+      session.value = { sessionId: started.sessionId, mode: started.mode, completed: started.completed, questions: started.questions, answers: started.answers }
+      answers.value = {}; persistedAnswers.value = {}; currentIndex.value = 0; persist()
     } catch { error.value = 'Não foi possível iniciar. Confira os dados e tente novamente em instantes.' }
     finally { loading.value = false }
   }
+  async function saveQuestionAnswer(questionId: string, optionId: string) {
+    if (!session.value) return false
+    if (persistedAnswers.value[questionId] === optionId) return true
+    submitting.value = true; error.value = ''
+    try {
+      await $fetch(`/api/sessions/${session.value.sessionId}/answer`, {
+        method: 'POST', headers: access.headers(session.value.sessionId), body: { questionId, optionId }
+      })
+      persistedAnswers.value[questionId] = optionId
+      persist()
+      return true
+    } catch {
+      error.value = 'Não foi possível salvar sua resposta agora. Ela continua neste dispositivo; tente novamente antes de avançar.'
+      return false
+    } finally { submitting.value = false }
+  }
   function selectAnswer(id: string) {
     if (!currentQuestion.value || submitting.value) return
-    answers.value[currentQuestion.value.id] = id; persist()
+    const questionId = currentQuestion.value.id
+    answers.value[questionId] = id
+    delete persistedAnswers.value[questionId]
+    persist()
+    void saveQuestionAnswer(questionId, id)
   }
   async function focusQuestion() { await nextTick(); document.querySelector<HTMLElement>('[data-question-heading]')?.focus() }
-  async function next() { if (hasCurrentAnswer.value && !isLastQuestion.value) { currentIndex.value++; await focusQuestion() } }
+  async function next() {
+    const question = currentQuestion.value
+    const answer = currentAnswer.value
+    if (!question || !answer || isLastQuestion.value || submitting.value) return
+    if (!await saveQuestionAnswer(question.id, answer)) return
+    currentIndex.value++; await focusQuestion()
+  }
   async function previous() { if (!isFirstQuestion.value) { currentIndex.value--; await focusQuestion() } }
   async function finish() {
     if (!session.value || submitting.value) return
@@ -99,7 +129,7 @@ export const useDiagnostic = (mode: SurveyMode) => {
   function restartUnavailable() {
     if (!canStartNewSession.value || saved.value?.completed) return
     try { localStorage.removeItem(key); localStorage.removeItem(`padi:${mode}:v1`) } catch { /* Memory-only participation remains possible. */ }
-    session.value = null; saved.value = null; answers.value = {}; currentIndex.value = 0
+    session.value = null; saved.value = null; answers.value = {}; persistedAnswers.value = {}; currentIndex.value = 0
     canStartNewSession.value = false; error.value = ''
   }
   onMounted(restore)

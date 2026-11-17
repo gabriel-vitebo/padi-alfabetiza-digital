@@ -56,7 +56,7 @@ export type DiagnosticResult = {
   competencies: CompetencyResult[]
 }
 export type SurveyMode = 'research' | 'fair'
-export type Session = { sessionId: string; mode: SurveyMode; completed: boolean; questions: Question[] }
+export type Session = { sessionId: string; mode: SurveyMode; completed: boolean; questions: Question[]; answers: { questionId: string; optionId: string }[] }
 export type SurveyResult = DiagnosticResult & { sessionId: string; mode: SurveyMode }
 
 export type StartedSession = Session & { accessToken: string }

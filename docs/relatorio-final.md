@@ -25,7 +25,7 @@ Os arquivos, modelos, relações, conexão, pooling, transações e migração d
 
 | Experiência | Entrega |
 |---|---|
-| Pesquisa | Área de estudo ou atuação, 14 questões balanceadas, API/Prisma, snapshots, retomada e conclusão atômica |
+| Pesquisa | Área de estudo ou atuação, 10 questões balanceadas com perguntas introdutórias, API/Prisma, snapshots, retomada e conclusão atômica |
 | Desafio | Mesmo motor, cinco eixos/contexto feira, resultado limitado |
 | Resultado | Persistência real, token obrigatório, percentuais por eixo, feedback e empates |
 | Dashboard | Pesquisa concluída, agregados Prisma/PostgreSQL, filtro por área e comparação, sem respostas brutas |

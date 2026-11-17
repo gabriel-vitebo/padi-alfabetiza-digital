@@ -7,6 +7,7 @@ const option = (key: keyof typeof contextualOptions) => z.string().refine(value 
 export const profileSchema = z.object({ area: option('area') }).strict()
 export const startSchema = z.object({ profile: profileSchema.optional() }).strict()
 export const answersSchema = z.object({ answers: z.array(z.object({ questionId: z.string().min(1).max(80), optionId: z.string().min(1).max(80) }).strict()).min(1).max(200) }).strict()
+export const answerSchema = z.object({ questionId: z.string().min(1).max(80), optionId: z.string().min(1).max(80) }).strict()
 export const filtersSchema = z.object({ area: option('area').optional() }).strict()
 export type Filters = z.infer<typeof filtersSchema>
 export class SurveyError extends Error {

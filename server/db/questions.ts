@@ -3,12 +3,12 @@ import type { StoredQuestion as Question } from '../domain/types'
 export const diagnosticQuestions: Question[] = [
   {
     id: 'Q01', competency: 'access-and-use', contexts: ['diagnostico', 'feira'],
-    statement: 'Você precisa enviar um trabalho pela plataforma da faculdade, mas o arquivo está em um formato que a plataforma não aceita. O que você faria primeiro?',
+    statement: 'Você usa a internet para estudar e precisa encontrar uma explicação para uma atividade escolar. O que faria primeiro?',
     options: [
-      { id: 'A', label: 'Verificaria quais formatos são aceitos e procuraria uma forma adequada de converter ou exportar o arquivo.', score: 2 },
-      { id: 'B', label: 'Pediria para um colega converter o arquivo para mim, sem tentar entender como fazer.', score: 1 },
-      { id: 'C', label: 'Renomearia manualmente a extensão do arquivo esperando que ele passe a funcionar.', score: 0 },
-      { id: 'D', label: 'Desistiria do envio e aguardaria o professor perguntar o que aconteceu.', score: 0 }
+      { id: 'A', label: 'Pesquisaria o assunto usando palavras relacionadas à dúvida e abriria um resultado que pareça útil.', score: 2 },
+      { id: 'B', label: 'Perguntaria em um grupo de mensagens e também tentaria pesquisar o assunto.', score: 1 },
+      { id: 'C', label: 'Usaria apenas a primeira frase que aparecer, sem abrir o resultado.', score: 0 },
+      { id: 'D', label: 'Desistiria porque não sei qual palavra usar na busca.', score: 0 }
     ]
   },
   {
@@ -43,12 +43,12 @@ export const diagnosticQuestions: Question[] = [
   },
   {
     id: 'Q05', competency: 'information-and-critical-thinking', contexts: ['diagnostico', 'feira'],
-    statement: 'Você encontra em uma rede social uma informação surpreendente que pretende utilizar em um trabalho acadêmico, mas a publicação não mostra de onde os dados vieram. O que faria?',
+    statement: 'Quando você pesquisa algo para um trabalho, como costuma decidir se uma informação é confiável?',
     options: [
-      { id: 'A', label: 'Procuraria a origem da informação e compararia com outras fontes confiáveis antes de utilizá-la.', score: 2 },
-      { id: 'B', label: 'Utilizaria se a publicação fosse de um perfil conhecido e tivesse muitos comentários positivos.', score: 1 },
-      { id: 'C', label: 'Utilizaria porque muitas pessoas compartilharam a publicação.', score: 0 },
-      { id: 'D', label: 'Consideraria verdadeira se o texto estivesse bem escrito e apresentasse números.', score: 0 }
+      { id: 'A', label: 'Confiro quem publicou e comparo com outra fonte confiável.', score: 2 },
+      { id: 'B', label: 'Vejo se a informação aparece em mais de um lugar.', score: 1 },
+      { id: 'C', label: 'Confio quando aparece entre os primeiros resultados da busca.', score: 0 },
+      { id: 'D', label: 'Confio quando muitas pessoas compartilharam ou curtiram.', score: 0 }
     ]
   },
   {

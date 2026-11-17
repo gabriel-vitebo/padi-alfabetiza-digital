@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { diagnosticQuestions as bank } from '../server/db/questions'
 import { selectQuestions } from '../server/domain/select-questions'
 import { calculateDiagnosticResult } from '../server/domain/result'
-import { answersSchema, filtersSchema, profileSchema, validateAnswers } from '../server/domain/validation'
+import { answerSchema, answersSchema, filtersSchema, profileSchema, validateAnswers } from '../server/domain/validation'
 import { assertDevelopmentSeed, assertLocalReset, getEnvironment } from '../server/domain/environment'
 import { publicQuestion } from '../server/domain/sessions'
 import { protectDistribution } from '../server/domain/dashboard'
@@ -23,11 +23,13 @@ test('seed matches all 28 questions, contexts and 112 alternatives in the source
     for (const o of q.options) assert.ok(block.includes(`**${o.id} — ${o.score} ponto${o.score === 1 ? '' : 's'}:** ${o.label}`))
   }
 })
-test('research selects exactly two questions per axis and no duplicates', () => {
+test('research includes introductory questions and balances all seven axes', () => {
   for(let i=0;i<100;i++) {
-    const selected=selectQuestions({questions:bank,total:14,context:'diagnostico'})
-    assert.equal(selected.length,14); assert.equal(new Set(selected.map(q=>q.id)).size,14)
-    for(const id of competencyIds) assert.equal(selected.filter(q=>q.competency===id).length,2)
+    const selected=selectQuestions({questions:bank,total:10,context:'diagnostico',requiredQuestionIds:['Q01','Q05']})
+    assert.equal(selected.length,10); assert.equal(new Set(selected.map(q=>q.id)).size,10)
+    assert.ok(selected.some(q=>q.id==='Q01')); assert.ok(selected.some(q=>q.id==='Q05'))
+    const counts=competencyIds.map(id=>selected.filter(q=>q.competency===id).length)
+    assert.ok(counts.every(n=>n>=1)); assert.ok(Math.max(...counts)-Math.min(...counts)<=1)
   }
 })
 test('fair selects five distinct axes and eligible questions only', () => {
@@ -46,8 +48,9 @@ test('selection generalizes to 1–28 and fails for impossible or broken banks',
     if(total>=7) assert.ok(counts.every(n=>n>=1))
   }
   for(const total of [0,-1,29,NaN,1.5]) assert.throws(()=>selectQuestions({questions:bank,total,context:'diagnostico'}))
-  assert.throws(()=>selectQuestions({questions:bank.slice(4),total:14,context:'diagnostico'}))
-  assert.throws(()=>selectQuestions({questions:[...bank,bank[0]!],total:14,context:'diagnostico'}))
+  assert.throws(()=>selectQuestions({questions:bank.slice(4),total:10,context:'diagnostico'}))
+  assert.throws(()=>selectQuestions({questions:[...bank,bank[0]!],total:10,context:'diagnostico'}))
+  assert.throws(()=>selectQuestions({questions:bank,total:10,context:'diagnostico',requiredQuestionIds:['Q01','Q01']}))
 })
 test('server calculates normalized scores and omits absent competencies', () => {
   const q=[bank[0]!,bank[1]!,bank[4]!]
@@ -63,6 +66,8 @@ test('submission rejects incomplete, duplicate, foreign and invalid answers, or 
   assert.deepEqual(validateAnswers(q,valid,false),{Q01:'A',Q02:'B'})
   for(const input of [valid.slice(0,1),[valid[0]!,valid[0]!],[valid[0]!,{questionId:'Q03',optionId:'A'}],[valid[0]!,{questionId:'Q02',optionId:'Z'}]]) assert.throws(()=>validateAnswers(q,input,false))
   assert.throws(()=>validateAnswers(q,valid,true))
+  assert.equal(answerSchema.safeParse(valid[0]).success,true)
+  assert.equal(answerSchema.safeParse({...valid[0],score:2}).success,false)
   assert.equal(answersSchema.safeParse({answers:valid,score:100}).success,false)
 })
 test('public question projection never exposes internal metadata', () => {

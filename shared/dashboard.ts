@@ -9,4 +9,6 @@ export type Aggregate = {
 export type DashboardSummary = {
   status: 'empty' | 'insufficient' | 'ready'; minimum: number
   segment: Aggregate | null; overall: Aggregate | null
+  hasPartialParticipants: boolean
+  questionResponses: Aggregate['questions']
 }

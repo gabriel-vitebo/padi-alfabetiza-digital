@@ -64,7 +64,7 @@ Bancos novos recebem todas via deploy. Bancos anteriores ao Prisma seguem o base
 
 Ao criar uma sessão, o backend gera 32 bytes com `crypto.randomBytes` e retorna o segredo em base64url. O PostgreSQL recebe somente o hash SHA-256. O segredo nunca é derivado do UUID.
 
-GET da sessão, POST de respostas e GET de resultado exigem `Authorization: Bearer <token>`. Comparação do hash usa `timingSafeEqual`. Tokens ausentes, malformados, incorretos ou de outra sessão são negados. O dashboard não tem tokens, IDs de participantes ou respostas individuais.
+GET da sessão, POST de resposta incremental, POST de submissão e GET de resultado exigem `Authorization: Bearer <token>`. Comparação do hash usa `timingSafeEqual`. Tokens ausentes, malformados, incorretos ou de outra sessão são negados. O dashboard não tem tokens, IDs de participantes ou respostas individuais.
 
 O navegador guarda `padi:research:v2`/`padi:fair:v2`, incluindo token e ID. O segredo não é colocado na URL nem no HTML renderizado pelo servidor. Resultado é consultado client-side. Se storage falhar, a memória da visita mantém o acesso e a interface informa a limitação de retomada.
 
@@ -72,9 +72,9 @@ Sessões anteriores permanecem no banco/agregados, mas **não são reivindicáve
 
 ## Transação e cálculo
 
-Início consulta questões ativas via Prisma, seleciona 14 para pesquisa (duas por eixo) ou cinco para feira (eixos distintos/contexto feira), e grava sessão/perfil/snapshots em `$transaction`. A projeção pública exclui score, justificativa e resposta ideal.
+Início consulta questões ativas via Prisma, seleciona 10 para pesquisa (inclui Q01 e Q05 e cobre os sete eixos) ou cinco para feira (eixos distintos/contexto feira), e grava sessão/perfil/snapshots em `$transaction`. A projeção pública exclui score, justificativa e resposta ideal.
 
-Submissão autentica a sessão, faz `updateMany` condicionado a IN_PROGRESS para adquirir o lock, valida pertencimento/completude/duplicidade e grava respostas/resultados/conclusão na mesma transação. Concorrentes aguardam e recebem 409 quando a primeira conclui. Falhas fazem rollback. PKs/FKs/CHECKs protegem também o banco.
+Resposta incremental autentica a sessão, adquire o lock da sessão, valida pergunta/opção no snapshot e faz upsert pela PK sessão/questão. Uma resposta alterada substitui a anterior. Submissão autentica a sessão, adquire o mesmo lock, valida completude e consolida todas as respostas/resultados/conclusão na mesma transação. Concorrentes aguardam e recebem 409 quando a primeira conclui. Falhas fazem rollback. PKs/FKs/CHECKs protegem também o banco.
 
 Resultados são reconstruídos com os snapshots persistidos, não com uma nova consulta às questões editáveis. Eixos ausentes são omitidos, percentuais usam somente o máximo apresentado e desafio não produz percentual global. Feedback e empates são educativos, sem classificação definitiva.
 
@@ -82,7 +82,7 @@ Resultados são reconstruídos com os snapshots persistidos, não com uma nova c
 
 Prisma count/groupBy obtém frequências agregadas; a aplicação combina essas frequências em médias ponderadas dos percentuais. Uma consulta `$queryRaw` com `Prisma.sql` e parâmetros calcula a média por questão em relação ao máximo do snapshot. Não existe driver SQL paralelo ou interpolação de SQL de usuário.
 
-Somente pesquisa concluída entra no painel. Há filtro por área de estudo ou atuação, comparação com amostra geral, distribuição por área, questões ordenadas e sinalização de dados fictícios. A API de início recebe somente `profile.area`; o catálogo inclui opções para público geral e para não informar. Campos antigos ficam preservados, mas não são mais coletados/expostos no painel. Área NULL identifica registros anteriores, sem inferir uma área a partir do curso antigo; esses registros permanecem na amostra geral e recebem rótulo próprio na distribuição quando a privacidade permite.
+Pesquisa concluída entra nas médias gerais e por competência. Respostas por pergunta também incluem sessões incompletas, com filtro por área, distribuição e média por questão; resultados individuais nunca são criados para incompletas. A agregação por pergunta aplica o mínimo de cinco respostas e suprime também quando o complemento do filtro é pequeno. A API de início recebe somente `profile.area`; o catálogo inclui opções para público geral e para não informar. Campos antigos ficam preservados, mas não são mais coletados/expostos no painel. Área NULL identifica registros anteriores, sem inferir uma área a partir do curso antigo; esses registros permanecem na amostra geral e recebem rótulo próprio na distribuição quando a privacidade permite.
 
 Mínimo de cinco: segmento, complementos da amostra geral e de todos os subconjuntos dos filtros ativos. Questões/eixos e distribuições comparadas têm supressão adicional para complementos pequenos. Uma célula pequena suprime a distribuição inteira, evitando subtração simples. Tudo usa uma transação RepeatableRead.
 
