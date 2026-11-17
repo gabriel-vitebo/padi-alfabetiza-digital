@@ -37,7 +37,13 @@ export async function assertDatabaseEnvironment(db: Database | Transaction) {
   const environment = getEnvironment()
   const row = await db.environment.findFirst({ where: { singleton: true } })
   if (row?.environment !== environment) {
-    console.error('[db] Environment marker mismatch', { expected: environment, actual: row?.environment ?? 'missing' })
+    const target = new URL(databaseUrl())
+    console.error('[db] Environment marker mismatch', {
+      expected: environment,
+      actual: row?.environment ?? 'missing',
+      databaseHost: target.hostname,
+      databaseProjectRef: target.username.split('.')[1] ?? 'unscoped'
+    })
     throw new Error('Banco pertence a outro ambiente')
   }
   if (environment === 'production') {
