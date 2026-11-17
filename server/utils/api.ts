@@ -13,6 +13,12 @@ export function api<T>(handler: (event: H3Event) => Promise<T>) {
       }
       if (error instanceof ZodError) throw createError({ statusCode: 400, message: 'Confira os dados enviados.' })
       if (error instanceof SurveyError) throw createError({ statusCode: error.statusCode, message: error.message })
+      const failure = error && typeof error === 'object' ? error as { name?: unknown; code?: unknown } : undefined
+      console.error('[api] Unhandled request failure', {
+        method: event.method,
+        name: typeof failure?.name === 'string' ? failure.name : 'UnknownError',
+        code: typeof failure?.code === 'string' ? failure.code : undefined
+      })
       throw createError({ statusCode: 503, message: 'Serviço temporariamente indisponível. Tente novamente em instantes.' })
     }
   })
