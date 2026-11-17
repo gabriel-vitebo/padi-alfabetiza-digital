@@ -14,10 +14,20 @@ export function api<T>(handler: (event: H3Event) => Promise<T>) {
       if (error instanceof ZodError) throw createError({ statusCode: 400, message: 'Confira os dados enviados.' })
       if (error instanceof SurveyError) throw createError({ statusCode: error.statusCode, message: error.message })
       const failure = error && typeof error === 'object' ? error as { name?: unknown; code?: unknown } : undefined
+      const message = error instanceof Error ? error.message : ''
+      const failureCategory = message === 'Banco pertence a outro ambiente' ? 'database-environment-mismatch'
+        : message === 'Banco de produção contém participações sintéticas' ? 'synthetic-data-in-production'
+        : message.startsWith('Vercel Production exige') ? 'vercel-environment-mismatch'
+        : message.startsWith('Configure APP_ENV') ? 'app-environment-missing'
+        : message.startsWith('Conexões remotas exigem') ? 'database-ssl-mode-invalid'
+        : message.startsWith('DATABASE_SSL_CA_B64') ? 'database-ca-invalid'
+        : message.startsWith('Configure DATABASE_URL') ? 'database-url-missing'
+        : 'unclassified'
       console.error('[api] Unhandled request failure', {
         method: event.method,
         name: typeof failure?.name === 'string' ? failure.name : 'UnknownError',
         code: typeof failure?.code === 'string' ? failure.code : undefined,
+        category: failureCategory,
         appEnvironment: process.env.APP_ENV || 'missing',
         vercelEnvironment: process.env.VERCEL_ENV || 'missing',
         databaseUrlConfigured: Boolean(process.env.DATABASE_URL),
