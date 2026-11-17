@@ -36,7 +36,10 @@ export function getDatabase() { return globalPrisma.padiPrisma ??= createDatabas
 export async function assertDatabaseEnvironment(db: Database | Transaction) {
   const environment = getEnvironment()
   const row = await db.environment.findFirst({ where: { singleton: true } })
-  if (row?.environment !== environment) throw new Error('Banco pertence a outro ambiente')
+  if (row?.environment !== environment) {
+    console.error('[db] Environment marker mismatch', { expected: environment, actual: row?.environment ?? 'missing' })
+    throw new Error('Banco pertence a outro ambiente')
+  }
   if (environment === 'production') {
     const syntheticCount = await db.surveySession.count({ where: { synthetic: true } })
     if (syntheticCount > 0) throw new Error('Banco de produção contém participações sintéticas')
