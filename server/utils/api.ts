@@ -17,7 +17,11 @@ export function api<T>(handler: (event: H3Event) => Promise<T>) {
       console.error('[api] Unhandled request failure', {
         method: event.method,
         name: typeof failure?.name === 'string' ? failure.name : 'UnknownError',
-        code: typeof failure?.code === 'string' ? failure.code : undefined
+        code: typeof failure?.code === 'string' ? failure.code : undefined,
+        appEnvironment: process.env.APP_ENV || 'missing',
+        vercelEnvironment: process.env.VERCEL_ENV || 'missing',
+        databaseUrlConfigured: Boolean(process.env.DATABASE_URL),
+        databaseCaConfigured: Boolean(process.env.DATABASE_SSL_CA_B64)
       })
       throw createError({ statusCode: 503, message: 'Serviço temporariamente indisponível. Tente novamente em instantes.' })
     }
