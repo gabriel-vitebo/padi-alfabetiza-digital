@@ -68,7 +68,7 @@ Nenhuma variável desta tabela deve receber prefixo `NUXT_PUBLIC_`.
 
 `DATABASE_MIGRATION_URL` é o nome escolhido neste projeto para a URL administrativa: `prisma.config.ts` a entrega ao campo `datasource.url` do Prisma 7. Localmente, vazio usa `DATABASE_URL`; os scripts administrativos exigem URL explícita em homolog/production. Os scripts leem `.env` se existir, preservando valores já definidos externamente. Não há seleção automática de `.env.homolog`/`.env.production`: exporte explicitamente as variáveis do ambiente desejado. Arquivos `.env*` estão ignorados, exceto `.env.example`.
 
-`getEnvironment()` rejeita valores ausentes/desconhecidos e divergências com `VERCEL_ENV`. Um marcador na tabela `padi.environment` identifica o banco provisionado. Toda operação confere esse marcador; um banco homolog não é aceito por uma instância production. A conexão local só aceita hosts locais. Esses controles não substituem a conferência das URLs no primeiro provisionamento de um banco vazio. O wrapper de migrations exige `CONFIRM_DATABASE_ENV` igual a `APP_ENV` para comandos administrativos remotos; esta variável não é necessária na aplicação Vercel.
+`getEnvironment()` rejeita valores ausentes/desconhecidos e divergências com `VERCEL_ENV`; não existe exceção para executar homologação em Vercel Production. Um marcador na tabela `padi.environment` identifica o banco provisionado. Toda operação confere esse marcador, e Production também recusa bancos com participações sintéticas. A conexão local só aceita hosts locais. Esses controles não substituem a conferência das URLs no primeiro provisionamento de um banco vazio. O wrapper de migrations exige `CONFIRM_DATABASE_ENV` igual a `APP_ENV` para comandos administrativos remotos; esta variável não é necessária na aplicação Vercel.
 
 ## Supabase e Vercel
 
@@ -97,7 +97,7 @@ Referência: [conexões PostgreSQL no Supabase](https://supabase.com/docs/guides
 1. Crie outro projeto Supabase vazio para dados reais.
 2. Depois de validar as mesmas migrations em local e homolog, confira as URLs desse projeto e configure externamente `APP_ENV=production`, `DATABASE_URL`, `DATABASE_MIGRATION_URL` e `CONFIRM_DATABASE_ENV=production` no executor administrativo.
 3. Execute `pnpm db:migrate:deploy` e **somente** `pnpm db:seed`.
-4. Configure `APP_ENV=production` e `DATABASE_URL` no escopo **Production** da Vercel.
+4. Configure `APP_ENV=production` e `DATABASE_URL` no escopo **Production** da Vercel, apontando para o projeto Supabase Production separado. Não configure variáveis que permitam homologação em Production.
 5. Faça deploy após as migrations; mantenha as credenciais de migrations no executor administrativo, não no browser.
 
 Nunca execute seed fictício em production. Não existe script `db:reset`. A função de proteção de reset aceita apenas local e é testada. Não há deploy automático ou configuração de contas externas nesta entrega.
