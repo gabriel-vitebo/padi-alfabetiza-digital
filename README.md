@@ -78,7 +78,7 @@ Na opção **Connect** de cada projeto, copie a URL real adequada. Não há URLs
 
 - Aplicação Vercel: **transaction pooler**, geralmente porta 6543, com Prisma 7 e `@prisma/adapter-pg` (driver `pg`, sem prepared statements nomeados). Pool do adapter de no máximo duas conexões por instância, timeout de conexão, conexões ociosas e tempo máximo de vida configurados. Usa runtime Node/Nitro, não Edge.
 - Migrations/seed: conexão direta se o executor suporta a conectividade do projeto, ou **session pooler** para acesso IPv4. Configure `DATABASE_MIGRATION_URL` apontando para o mesmo projeto. Não execute migrations a cada inicialização de função.
-- Use `sslmode=verify-full` nas URLs remotas. TLS com verificação completa de certificado em homolog/production; não desabilite verificação para contornar um erro. Se usar CA personalizada, configure confiança no ambiente Node.
+- O runtime da aplicação força TLS com verificação completa de certificado em homolog/production, independentemente do `sslmode` na URL. Para Prisma CLI e outras ferramentas externas, use `sslmode=verify-full`; não desabilite a verificação para contornar erros. Se usar CA personalizada, configure confiança no ambiente Node.
 
 Referência: [conexões PostgreSQL no Supabase](https://supabase.com/docs/guides/database/connecting-to-postgres) e [prepared statements](https://supabase.com/docs/guides/troubleshooting/disabling-prepared-statements-qL8lEL).
 

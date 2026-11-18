@@ -8,10 +8,6 @@ export type Transaction = Prisma.TransactionClient
 export function createDatabase(migration = false) {
   const environment = getEnvironment()
   const connection = new URL(databaseUrl(migration))
-  const sslMode = connection.searchParams.get('sslmode')
-  if (environment !== 'local' && sslMode !== 'verify-full') {
-    throw new Error('Conexões remotas exigem sslmode=verify-full')
-  }
   const caPath = connection.searchParams.get('sslrootcert')
   let ca = process.env.DATABASE_SSL_CA_B64
     ? Buffer.from(process.env.DATABASE_SSL_CA_B64, 'base64').toString('utf8')
@@ -25,6 +21,8 @@ export function createDatabase(migration = false) {
     connectionString: connection.toString(), max: 2,
     idleTimeoutMillis: 20_000, connectionTimeoutMillis: 10_000,
     maxLifetimeSeconds: 300,
+    // Enforce verified TLS through pg itself; do not rely on sslmode surviving
+    // deployment environment-variable handling in the connection URL.
     ssl: environment === 'local' ? false : { rejectUnauthorized: true, ...(ca ? { ca } : {}) },
     application_name: `padi-${environment}`, statement_timeout: 15_000
   }, { schema: 'padi' })
